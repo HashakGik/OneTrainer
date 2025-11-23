@@ -278,7 +278,7 @@ class ImageModel(SingletonConfigModel):
 
         # If there is no progress callback, there is no reason to compute the output. Note that _verify_image may still be reimplemented in the future to attempt a file fix, therefore we should still map files to it.
         if self.progress_fn is not None:
-            for file, valid in zip(files, is_valid):
+            for file, valid in zip(files, is_valid, strict=True):
                 if valid:
                     self.progress_fn({"data": f"✓ {file.name} is valid"})
                 else:
@@ -294,10 +294,8 @@ class ImageModel(SingletonConfigModel):
 
             for f in files:
                 stem = f.stem
-                if stem.endswith("-masklabel"):
-                    key = stem.removesuffix("-masklabel")
-                else:
-                    key = stem
+
+                key = stem.removesuffix("-masklabel") if stem.endswith("-masklabel") else stem
 
                 if key not in groups:
                     groups[key] = {"image": None, "caption": None, "masks": []}

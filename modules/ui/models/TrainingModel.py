@@ -19,11 +19,6 @@ class TrainingModel(SingletonConfigModel):
         self.config = None
         self.training_commands = None
 
-    def sample_now(self):
-        train_commands = self.training_commands
-        if train_commands:
-            train_commands.sample_default()
-
     def backup_now(self):
         train_commands = self.training_commands
         if train_commands:

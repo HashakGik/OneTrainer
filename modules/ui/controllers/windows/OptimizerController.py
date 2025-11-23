@@ -114,8 +114,7 @@ class OptimizerController(BaseController):
     ###FSM###
 
     def _setup(self):
-        row = 0
-        for k in sorted(self.optimizer_params.keys()):
+        for row, k in enumerate(sorted(self.optimizer_params.keys())):
             v = self.optimizer_params[k]
 
             if v["type"] == "bool":
@@ -138,8 +137,6 @@ class OptimizerController(BaseController):
                 lbl.setBuddy(wdg)
                 self.ui.optimizerLay.addWidget(lbl, row, 0, 1, 1)
                 self.ui.optimizerLay.addWidget(wdg, row, 1, 1, 1)
-
-            row += 1
 
     def __loadDefaults(self):
         def f():

@@ -63,7 +63,7 @@ class BaseWorker(QObject):
             self.connections["progress"].append(self.progress.connect(progress_fn))
 
     def disconnectAll(self):
-        for k, v in self.connections.items():
+        for v in self.connections.values():
             for v2 in v:
                 v2.disconnect()
         self.connections = {"initialized": [], "result": [], "errored": [], "finished": [], "aborted": [], "progress": []}

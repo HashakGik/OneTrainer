@@ -63,7 +63,7 @@ class BaseController:
                         self._connect(ui_elem.stateChanged, self.__readCbx(ui_elem, var, model), group)
                     elif isinstance(ui_elem, QtW.QComboBox):
                         self._connect(ui_elem.activated, self.__readCbm(ui_elem, var, model), group)
-                    elif isinstance(ui_elem, QtW.QSpinBox) or isinstance(ui_elem, QtW.QDoubleSpinBox):
+                    elif isinstance(ui_elem, (QtW.QSpinBox, QtW.QDoubleSpinBox)):
                         self._connect(ui_elem.valueChanged, self.__readSbx(ui_elem, var, model), group)
                     elif isinstance(ui_elem, SNLineEdit): # IMPORTANT: keep this above base class!
                         self._connect(ui_elem.editingFinished, self.__readSNLed(ui_elem, var, model), group)
@@ -111,7 +111,7 @@ class BaseController:
 
     # Disconnects all the UI connections.
     def _disconnectAll(self):
-        for k, v in self.connections.items():
+        for v in self.connections.values():
             for c in v:
                 self.ui.disconnect(c)
 
@@ -254,9 +254,9 @@ class BaseController:
                 idx = ui_elem.findData(val)
                 if idx != -1:
                     ui_elem.setCurrentIndex(idx)
-            elif isinstance(ui_elem, QtW.QSpinBox) or isinstance(ui_elem, QtW.QDoubleSpinBox):
+            elif isinstance(ui_elem, (QtW.QSpinBox, QtW.QDoubleSpinBox)):
                 ui_elem.setValue(float(val))
-            elif isinstance(ui_elem, SNLineEdit) or isinstance(ui_elem, QtW.QLineEdit): # IMPORTANT: keep this above base class!
+            elif isinstance(ui_elem, (SNLineEdit, QtW.QLineEdit)): # IMPORTANT: keep this above base class!
                 ui_elem.setText(str(val))
         ui_elem.blockSignals(False)
 

@@ -111,10 +111,7 @@ class SingletonConfigModel:
                     print(f"DEBUG: key {path} not found in config")
 
     def load_available_config_names(self, dir="training_presets", include_default=True):
-        if include_default:
-            configs = [("", path_util.canonical_join(dir, "#.json"))]
-        else:
-            configs = []
+        configs = [("", path_util.canonical_join(dir, "#.json"))] if include_default else []
 
         if os.path.isdir(dir):
             for path in os.listdir(dir):
