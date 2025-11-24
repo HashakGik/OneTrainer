@@ -100,6 +100,12 @@ def _optimize_png(file):
     else:
         return False, 0
 
+def _is_lossless_check(file, img, check_lossless):
+    if not check_lossless:
+        return False
+    else:
+        return file.suffix.lower() in {".jpg", ".jpeg"}
+
 def _convert_image(format_options, file):
     # Use local variables for performance and clarity
     format_ext = format_options["format_ext"]
@@ -111,13 +117,8 @@ def _convert_image(format_options, file):
     original_size = file.stat().st_size
     new_path = file.with_suffix(format_ext)
 
-    if format_options["check_lossless"]:
-        is_lossless_check = lambda file, img: file.suffix.lower() in {".jpg", ".jpeg"}
-    else:
-        is_lossless_check = lambda file, img: False
-
     with Image.open(file) as img:
-        is_lossless = file.suffix.lower() in lossless_extensions or is_lossless_check(file, img)
+        is_lossless = file.suffix.lower() in lossless_extensions or _is_lossless_check(file, img, format_options["check_lossless"])
 
         save_kwargs = save_kwargs_base.copy()
         save_kwargs["quality"] = quality
@@ -332,27 +333,26 @@ class ImageModel(SingletonConfigModel):
                     for i, img in enumerate(sorted(image_groups), start=1):
                         tmp = image_groups[img]
                         tmp_name = str(uuid.uuid4().hex)
-                        sample = [(tmp["image"], tmp["image"].with_name(f"{tmp_name}{tmp['image'].suffix}"), tmp["image"].with_name(f"{i}{tmp['image'].suffix}"))]
+                        renaming.extend([(tmp["image"], tmp["image"].with_name(f"{tmp_name}{tmp['image'].suffix}"), tmp["image"].with_name(f"{i}{tmp['image'].suffix}"))])
                         if tmp["caption"] is not None:
-                            sample.append((tmp["caption"], tmp["caption"].with_name(f"{tmp_name}{tmp['caption'].suffix}"), tmp["caption"].with_name(f"{i}{tmp['caption'].suffix}")))
+                            renaming.extend([(tmp["caption"], tmp["caption"].with_name(f"{tmp_name}{tmp['caption'].suffix}"), tmp["caption"].with_name(f"{i}{tmp['caption'].suffix}"))])
                         for mask in tmp["masks"]:
-                            sample.append((mask, mask.with_name(f"{tmp_name}-masklabel{mask.suffix}"), mask.with_name(f"{i}-masklabel{mask.suffix}")))
-
-                        renaming.extend(sample)
+                            renaming.extend([(mask, mask.with_name(f"{tmp_name}-masklabel{mask.suffix}"), mask.with_name(f"{i}-masklabel{mask.suffix}"))])
 
                     errored = False
                     # Rename all the samples (image, caption and mask) in order. To avoid overwriting samples which already have integer names, we need two passes.
                     # First pass: source to temp name.
+                    last_before_error = 0
                     try:
-                        j = 0
                         for j, (src, tmp_dest, _) in enumerate(renaming):
                             self.progress_fn({"data": f"Renaming {src.name} to {tmp_dest.name}..."})
                             src.rename(tmp_dest)
+                            last_before_error = j
 
                     except OSError:
                         errored = True
                         try:
-                            for src2, dest2, _ in renaming[:j]:
+                            for src2, dest2, _ in renaming[:-last_before_error]:
                                 dest2.rename(src2)
                         except OSError:
                             if self.progress_fn is not None:
@@ -365,18 +365,19 @@ class ImageModel(SingletonConfigModel):
 
                     if not errored:
                         # Second pass: temp name to destination.
+                        last_before_error = 0
                         try:
-                            j = 0
                             for j, (_, tmp_dest, final_dest) in enumerate(renaming):
                                 self.progress_fn({"data": f"Renaming {tmp_dest.name} to {final_dest.name}..."})
                                 tmp_dest.rename(final_dest)
                                 outfiles.append(final_dest)
+                                last_before_error = j
 
                         except OSError:
                             try:
-                                for _, src2, dest2 in renaming[:j]:
+                                for _, src2, dest2 in renaming[:-last_before_error]:
                                     dest2.rename(src2)
-                                outfiles = outfiles[:-j]
+                                outfiles = outfiles[:-last_before_error]
                             except OSError:
                                 if self.progress_fn is not None:
                                     self.progress_fn({"status": "Critical failure during rename",
