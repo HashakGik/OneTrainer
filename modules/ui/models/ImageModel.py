@@ -17,9 +17,9 @@ import imagesize
 import oxipng
 from PIL import Image, ImageColor
 
-
 # multiprocessing.Pool requires pickable functions, which must be defined outside classes.
 # https://pypi.org/project/pathos/ uses dill as serialization engine, allowing more flexibility, in case we want to switch to something more mainteinable.
+
 def _verify_image(file):
     """
             Verify a single image file for corruption. Raises ValueError on failure.
@@ -143,7 +143,7 @@ def _convert_image(format_options, file):
 
 class ImageModel(SingletonConfigModel):
     def __init__(self):
-        self.config = {
+        super().__init__({
             "directory": "",
             "verify_images": False,
             "sequential_rename": False,
@@ -153,25 +153,26 @@ class ImageModel(SingletonConfigModel):
             "resize_megapixels": ImageMegapixels.COMPUTE_PROOF_MEGAPIXEL_THRESHOLD,
             "resize_custom_megapixels": 4,
             "alpha_bg_color": "#ffffff",
-        }
+        })
 
         self.pool = None
         self.abort_flag = threading.Event()
         self.progress_fn = None
 
     def process_files(self, progress_fn=None):
-        directory = self.getState("directory")
-        self.progress_fn = progress_fn
+        with self.critical_region_read():
+            directory = self.get_state("directory")
+            self.progress_fn = progress_fn
 
-        if self.pool is None:
-            self.pool = Pool()
+            if self.pool is None:
+                self.pool = Pool()
 
-        if os.path.isdir(directory):
-            path = Path(directory)
-            files = [f for f in path.iterdir() if f.is_file()]
-            print(f"Found {len(files)} files in {directory}")
+            if os.path.isdir(directory):
+                path = Path(directory)
+                files = [f for f in path.iterdir() if f.is_file()]
+                print(f"Found {len(files)} files in {directory}")
 
-            self.__run_operations(files)
+                self.__run_operations(files)
 
     def terminate_pool(self):
         if self.pool is not None:
@@ -181,16 +182,16 @@ class ImageModel(SingletonConfigModel):
 
     def __run_operations(self, files):
         operations = []
-        if self.getState("verify_images"):
+        if self.get_state("verify_images"):
             operations.append(ImageOperations.VERIFY_IMG)
-        if self.getState("sequential_rename"):
+        if self.get_state("sequential_rename"):
             operations.append(ImageOperations.SEQUENTIAL_RENAME)
-        if self.getState("process_alpha"):
+        if self.get_state("process_alpha"):
             operations.append(ImageOperations.PROCESS_ALPHA)
-        if self.getState("resize_large_images"):
+        if self.get_state("resize_large_images"):
             operations.append(ImageOperations.RESIZE_LARGE_IMG)
 
-        opt = self.getState("optimization_type")
+        opt = self.get_state("optimization_type")
         if opt == ImageOptimization.PNG:
             operations.append(ImageOperations.OPTIMIZE_PNG)
         elif opt == ImageOptimization.WEBP:
@@ -290,6 +291,7 @@ class ImageModel(SingletonConfigModel):
     def __rename_files_sequentially(self, files):
         outfiles = files
         if len(files) > 0:
+            # TODO: THIS DOES NOT WORK! FILES ARE RENAMED IN THE WRONG ORDER
 
             groups = {}
 
@@ -358,7 +360,7 @@ class ImageModel(SingletonConfigModel):
                             if self.progress_fn is not None:
                                 self.progress_fn({"status": "Critical failure during rename",
                                                   "data": f"OSError while attempting rollback. Is {dest2.path} still accessible?"})
-                                traceback.print_exc()
+                                self.log("critical", traceback.format_exc())
 
                         if self.progress_fn is not None:
                             self.progress_fn({"status": "Rename failed, successfully rolled back.", "data": f"Rename failed for file {src.name}"})
@@ -382,7 +384,7 @@ class ImageModel(SingletonConfigModel):
                                 if self.progress_fn is not None:
                                     self.progress_fn({"status": "Critical failure during rename",
                                                       "data": f"OSError while attempting rollback. Is {dest2.path} still accessible?"})
-                                    traceback.print_exc()
+                                    self.log("critical", traceback.format_exc())
 
                             if self.progress_fn is not None:
                                 self.progress_fn({"status": "Rename failed, successfully rolled back.",
@@ -391,7 +393,7 @@ class ImageModel(SingletonConfigModel):
         return outfiles
 
     def __process_alpha_images(self, files):
-        bg_color_str = self.getState("alpha_bg_color")
+        bg_color_str = self.get_state("alpha_bg_color")
 
         files = [f for f in files if self._filter_images_and_skip_masks(f)]
 
@@ -430,9 +432,9 @@ class ImageModel(SingletonConfigModel):
     def __resize_large_images(self, files):
         files = [f for f in files if self._filter_is_image(f)] # TODO: original implementation skipped masks, but it does not make sense to rescale images, but not masks.
 
-        mp = self.getState("resize_megapixels")
+        mp = self.get_state("resize_megapixels")
         if mp == ImageMegapixels.CUSTOM:
-            mp = ImageMegapixels.ONE_MEGAPIXEL.value * self.getState("resize_custom_megapixels")
+            mp = ImageMegapixels.ONE_MEGAPIXEL.value * self.get_state("resize_custom_megapixels")
         else:
             mp = mp.value
 

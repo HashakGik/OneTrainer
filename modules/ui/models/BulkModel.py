@@ -36,7 +36,7 @@ def _edit_text(config, read_only, file):
 
 class BulkModel(SingletonConfigModel):
     def __init__(self):
-        self.config = {
+        super().__init__({
             "directory": "",
             "add_text": "",
             "add_mode": BulkEditMode.PREPEND,
@@ -45,7 +45,7 @@ class BulkModel(SingletonConfigModel):
             "replace_with": "",
             "regex_pattern": "",
             "regex_replace": "",
-        }
+        })
 
         self.pool = None
 
@@ -57,7 +57,7 @@ class BulkModel(SingletonConfigModel):
 
 
     def bulk_edit(self, read_only=False, preview_n=None, progress_fn=None):
-        base_path = Path(self.getState("directory"))
+        base_path = Path(self.get_state("directory"))
         files = list(base_path.glob("*.txt"))
 
         if self.pool is None:
@@ -66,7 +66,9 @@ class BulkModel(SingletonConfigModel):
         if preview_n is not None and read_only:
             files = files[:preview_n]
 
-        result = self.pool.map(functools.partial(_edit_text, self.config, read_only), files)
+        with self.critical_region_read():
+            result = self.pool.map(functools.partial(_edit_text, self.config, read_only), files)
+
         total = len(result)
         processed = len([r for r in result if r[1]])
         skipped = total - processed

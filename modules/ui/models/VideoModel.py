@@ -15,7 +15,7 @@ import scenedetect
 
 class VideoModel(SingletonConfigModel):
     def __init__(self):
-        self.config = {
+        super().__init__({
             "clips": {
                 "single_video": "",
                 "range_start": "",
@@ -47,7 +47,7 @@ class VideoModel(SingletonConfigModel):
                 "output": "",
                 "additional_args": ""
             }
-        }
+        })
 
     def __get_vid_paths(self, batch_mode: bool, input_path_single: str, input_path_dir: str):
         input_videos = []
@@ -67,12 +67,12 @@ class VideoModel(SingletonConfigModel):
                     print("Invalid video file!")
                     return []
             else:
-                print("No file specified, or invalid file path!")
+                self.log("error", "No file specified, or invalid file path!")
                 return []
         else:
             input_videos = []
             if not pathlib.Path(input_path_dir).is_dir() or input_path_dir == "":
-                print("Invalid input directory!")
+                self.log("error", "Invalid input directory!")
                 return []
             # Only traverse supported extensions to avoid opening every file.
             lower_exts = {e.lower() for e in SUPPORTED_VIDEO_EXTENSIONS}
@@ -87,7 +87,7 @@ class VideoModel(SingletonConfigModel):
                         vid.release()
                     if ok:
                         input_videos.append(path)
-            print(f'Found {len(input_videos)} videos to process')
+            self.log("info", f'Found {len(input_videos)} videos to process')
             return input_videos
 
     def __get_random_aspect(self, height : int, width : int, variation: float) -> tuple[int, int, int, int]:
@@ -138,63 +138,70 @@ class VideoModel(SingletonConfigModel):
         return x1, y1, w1, h1
 
     def extract_clips_multi(self, batch_mode: bool):
-        if not pathlib.Path(self.getState("clips.output")).is_dir() or self.getState("clips.output") == "":
-            print("Invalid output directory!")
+        cfg = self.bulk_read("clips.output", "clips.max_length", "clips.crop_variation",
+                             "clips.fps", "clips.single_video", "clips.directory",
+                             "clips.output_to_subdirectories", "clips.split_at_cuts",
+                             "clips.remove_borders", "clips.range_start", "clips.range_end",
+                             as_dict=True)
+
+
+        if not pathlib.Path(cfg["clips.output"]).is_dir() or cfg["clips.output"] == "":
+            self.log("error", "Invalid output directory!")
             return
 
         # validate numeric inputs
         try:
-            max_length = float(self.getState("clips.max_length"))
-            crop_variation = float(self.getState("clips.crop_variation"))
-            target_fps = int(self.getState("clips.fps"))
+            max_length = float(cfg["clips.max_length"])
+            crop_variation = float(cfg["clips.crop_variation"])
+            target_fps = int(cfg["clips.fps"])
         except ValueError:
-            print("Invalid numeric input for Max Length, Crop Variation, or FPS.")
+            self.log("error", "Invalid numeric input for Max Length, Crop Variation, or FPS.")
             return
         if max_length <= 0.25:
-            print("Max Length of clips must be > 0.25 seconds.")
+            self.log("error", "Max Length of clips must be > 0.25 seconds.")
             return
         if target_fps < 0:
-            print("Target FPS must be a positive integer (or 0 to skip fps re-encoding).")
+            self.log("error", "Target FPS must be a positive integer (or 0 to skip fps re-encoding).")
             return
         if not (0.0 <= crop_variation < 1.0):
-            print("Crop Variation must be between 0.0 and 1.0.")
+            self.log("error", "Crop Variation must be between 0.0 and 1.0.")
             return
 
-        input_videos = self.__get_vid_paths(batch_mode, self.getState("clips.single_video"), self.getState("clips.directory"))
+        input_videos = self.__get_vid_paths(batch_mode, cfg["clips.single_video"], cfg["clips.directory"])
         if len(input_videos) == 0:  # exit if no paths found
             return
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
             for video_path in input_videos:
-                if self.getState("clips.output_to_subdirectories") and batch_mode:
-                    output_directory = os.path.join(self.getState("clips.output"),
-                                                    os.path.splitext(os.path.relpath(video_path, self.getState("clips.directory")))[0])
-                elif self.getState("clips.output_to_subdirectories") and not batch_mode:
-                    output_directory = os.path.join(self.getState("clips.output"),
+                if cfg["clips.output_to_subdirectories"] and batch_mode:
+                    output_directory = os.path.join(cfg["clips.output"],
+                                                    os.path.splitext(os.path.relpath(video_path, cfg["clips.directory"]))[0])
+                elif cfg["clips.output_to_subdirectories"] and not batch_mode:
+                    output_directory = os.path.join(cfg["clips.output"],
                                                     os.path.splitext(os.path.basename(video_path))[0])
                 else:
-                    output_directory = self.getState("clips.output")
+                    output_directory = cfg["clips.output"]
 
                 if batch_mode:
                     executor.submit(self.__extract_clips,
-                                    str(video_path), "00:00:00", "99:99:99", max_length, self.getState("clips.split_at_cuts"),
-                                    self.getState("clips.remove_borders"), crop_variation, target_fps, output_directory)
+                                    str(video_path), "00:00:00", "99:99:99", max_length, cfg["clips.split_at_cuts"],
+                                    cfg["clips.remove_borders"], crop_variation, target_fps, output_directory)
                 else:
                     executor.submit(self.__extract_clips,
-                                    str(video_path), str(self.getState("clips.range_start")), str(self.getState("clips.range_end")), max_length, self.getState("clips.split_at_cuts"),
-                                    self.getState("clips.remove_borders"), crop_variation, target_fps, output_directory)
+                                    str(video_path), str(cfg["clips.range_start"]), str(cfg["clips.range_end"]), max_length, cfg["clips.split_at_cuts"],
+                                    cfg["clips.remove_borders"], crop_variation, target_fps, output_directory)
 
         if batch_mode:
-            print(f'Clip extraction from all videos in {self.getState("clips.directory")} complete')
+            self.log("info", f'Clip extraction from all videos in {cfg["clips.directory"]} complete')
         else:
-            print(f'Clip extraction from {self.getState("clips.single_video")} complete')
+            self.log("info", f'Clip extraction from {cfg["clips.single_video"]} complete')
 
     def __extract_clips(self, video_path: str, timestamp_min: str, timestamp_max: str, max_length: float,
                         split_at_cuts: bool, remove_borders : bool, crop_variation: float, target_fps: int, output_dir: str):
         video = cv2.VideoCapture(video_path)
         fps = video.get(cv2.CAP_PROP_FPS) or 0.0
         if fps <= 0:
-            print(f'Warning: Could not read FPS for "{os.path.basename(video_path)}". Falling back to 30 FPS.') # fallback to some sane FPS value
+            self.log("warning", f'Could not read FPS for "{os.path.basename(video_path)}". Falling back to 30 FPS.') # fallback to some sane FPS value
             fps = 30.0
         max_length_frames = int(max_length * fps)   #convert max length from seconds to frames
         min_length_frames = max(int(0.25*fps), 1)   #minimum clip length of 1/4 second or 1 frame
@@ -231,7 +238,7 @@ class VideoModel(SingletonConfigModel):
                 if length > (min_length_frames+2):
                     scene_list_split += [(scene[0]+1, scene[1]-1)]      #trim first and last frame from detected scenes to avoid transition artifacts
 
-        print(f'Video "{os.path.basename(video_path)}" being split into {len(scene_list_split)} clips in {output_dir}...')
+        self.log("info", f'Video "{os.path.basename(video_path)}" being split into {len(scene_list_split)} clips in {output_dir}...')
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
             for scene in scene_list_split:
@@ -245,7 +252,7 @@ class VideoModel(SingletonConfigModel):
         video = cv2.VideoCapture(str(video_path))
         fps = video.get(cv2.CAP_PROP_FPS) or 0.0
         if fps <= 0:
-            print(f'Warning: Could not read FPS for "{os.path.basename(video_path)}". Falling back to 30 FPS.')
+            self.log("warning", f'Could not read FPS for "{os.path.basename(video_path)}". Falling back to 30 FPS.')
             fps = 30.0
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -256,7 +263,7 @@ class VideoModel(SingletonConfigModel):
         frame_number = int(video.get(cv2.CAP_PROP_POS_FRAMES))
         success, frame = video.read()
         if not success or frame is None:
-            print(f'Failed to read frame from "{os.path.basename(video_path)}" at {int(frame_number)}. Skipping clip.')
+            self.log("error", f'Failed to read frame from "{os.path.basename(video_path)}" at {int(frame_number)}. Skipping clip.')
             video.release()
             return
 
@@ -309,68 +316,75 @@ class VideoModel(SingletonConfigModel):
                 try:
                     os.remove(output_name + output_ext)
                 except OSError:
-                    print(f"Failed to remove conversion placeholder {output_name + output_ext}, remove manually or check folder permissions.")
+                    self.log("error", f"Failed to remove conversion placeholder {output_name + output_ext}, remove manually or check folder permissions.")
 
     def extract_images_multi(self, batch_mode : bool):
-        if not pathlib.Path(self.getState("images.output")).is_dir() or self.getState("images.output") == "":
+        cfg = self.bulk_read("images.output", "images.capture_rate", "images.blur_removal",
+                             "images.crop_variation", "images.single_video", "images.directory",
+                             "images.output_to_subdirectories", "image_list_entry", "images.remove_borders",
+                             "images.range_start", "images.range_end",
+                             as_dict=True)
+
+
+        if not pathlib.Path(cfg["images.output"]).is_dir() or cfg["images.output"] == "":
             print("Invalid output directory!")
             return
 
         # validate numeric inputs
         try:
-            capture_rate = float(self.getState("images.capture_rate"))
-            blur_threshold = float(self.getState("images.blur_removal"))
-            crop_variation = float(self.getState("images.crop_variation"))
+            capture_rate = float(cfg["images.capture_rate"])
+            blur_threshold = float(cfg["images.blur_removal"])
+            crop_variation = float(cfg["images.crop_variation"])
         except ValueError:
-            print("Invalid numeric input for Images/sec, Blur Removal, or Crop Variation.")
+            self.log("error", "Invalid numeric input for Images/sec, Blur Removal, or Crop Variation.")
             return
         if capture_rate <= 0:
-            print("Images/sec must be > 0.")
+            self.log("error", "Images/sec must be > 0.")
             return
         if not (0.0 <= blur_threshold < 1.0):
-            print("Blur Removal must be between 0.0 and 1.0.")
+            self.log("error", "Blur Removal must be between 0.0 and 1.0.")
             return
         if not (0.0 <= crop_variation < 1.0):
-            print("Crop Variation must be between 0.0 and 1.0.")
+            self.log("error", "Crop Variation must be between 0.0 and 1.0.")
             return
 
-        input_videos = self.__get_vid_paths(batch_mode, self.getState("images.single_video"), self.getState("images.directory"))
+        input_videos = self.__get_vid_paths(batch_mode, cfg["images.single_video"], cfg["images.directory"])
         if len(input_videos) == 0:  #exit if no paths found
             return
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
             for video_path in input_videos:
-                if self.getState("images.output_to_subdirectories") and batch_mode:
-                    output_directory = os.path.join(self.getState("images.output"),
-                                                    os.path.splitext(os.path.relpath(video_path, self.getState("image_list_entry")))[0])
-                elif self.getState("images.output_to_subdirectories") and not batch_mode:
-                    output_directory = os.path.join(self.getState("images.output"),
+                if cfg["images.output_to_subdirectories"] and batch_mode:
+                    output_directory = os.path.join(cfg["images.output"],
+                                                    os.path.splitext(os.path.relpath(video_path, cfg["image_list_entry"]))[0])
+                elif cfg["images.output_to_subdirectories"] and not batch_mode:
+                    output_directory = os.path.join(cfg["images.output"],
                                                     os.path.splitext(os.path.basename(video_path))[0])
                 else:
-                    output_directory = self.getState("images.output")
+                    output_directory = cfg["images.output"]
 
                 if batch_mode:
                     executor.submit(self.__save_frames,
                                     str(video_path), "00:00:00", "99:99:99", capture_rate,
-                                    blur_threshold, self.getState("images.remove_borders"), crop_variation, output_directory)
+                                    blur_threshold, cfg["images.remove_borders"], crop_variation, output_directory)
                 else:
                     executor.submit(self.__save_frames,
-                                    str(video_path), str(self.getState("images.range_start")), str(self.getState("images.range_end")), capture_rate,
-                                    blur_threshold, self.getState("images.remove_borders"), crop_variation, output_directory)
+                                    str(video_path), str(cfg["images.range_start"]), str(cfg["images.range_end"]), capture_rate,
+                                    blur_threshold, cfg["images.remove_borders"], crop_variation, output_directory)
         if batch_mode:
-            print(f'Image extraction from all videos in {self.getState("images.directory")} complete')
+            self.log("info", f'Image extraction from all videos in {cfg["images.directory"]} complete')
         else:
-            print(f'Image extraction from {self.getState("images.single_video")} complete')
+            self.log("info", f'Image extraction from {cfg["images.single_video"]} complete')
 
     def __save_frames(self, video_path: str, timestamp_min: str, timestamp_max: str, capture_rate: float,
                       blur_threshold: float, remove_borders : bool, crop_variation: float, output_dir: str):
         video = cv2.VideoCapture(video_path)
         fps = video.get(cv2.CAP_PROP_FPS) or 0.0
         if fps <= 0:
-            print(f'Warning: Could not read FPS for "{os.path.basename(video_path)}". Falling back to 30 FPS.')
+            self.log("warning", f'Could not read FPS for "{os.path.basename(video_path)}". Falling back to 30 FPS.')
             fps = 30.0
         if capture_rate <= 0:
-            print("Images/sec must be > 0.")
+            self.log("error", "Images/sec must be > 0.")
             video.release()
             return
         image_rate = max(int(fps / capture_rate), 1)   # frames between captures (min 1)
@@ -387,7 +401,7 @@ class VideoModel(SingletonConfigModel):
             frame = max(0, min(frame, max(total_frames - 1, 0)))
             frame_list.append(frame)
 
-        print(f'Video "{os.path.basename(video_path)}" will be split into {len(frame_list)} images in {output_dir}...')
+        self.log("info", f'Video "{os.path.basename(video_path)}" will be split into {len(frame_list)} images in {output_dir}...')
 
         output_list = []
         for f in frame_list:
@@ -399,14 +413,14 @@ class VideoModel(SingletonConfigModel):
                 output_list.append((f, frame_sharpness))
 
         if not output_list:
-            print(f'No frames extracted from {os.path.basename(video_path)} in the selected range.')
+            self.log("warning", f'No frames extracted from {os.path.basename(video_path)} in the selected range.')
             video.release()
             return
 
         output_list_sorted = sorted(output_list, key=lambda x: x[1])
         cutoff = int(blur_threshold*len(output_list_sorted))     #calculate cutoff as portion of total frames
         output_list_cut = output_list_sorted[cutoff:]            # keep all frames above cutoff
-        print(f'{cutoff} blurriest images have been dropped from {os.path.basename(video_path)}')
+        self.log("info", f'{cutoff} blurriest images have been dropped from {os.path.basename(video_path)}')
 
         basename, ext = os.path.splitext(os.path.basename(video_path))
         if not os.path.exists(output_dir):
@@ -436,37 +450,41 @@ class VideoModel(SingletonConfigModel):
         video.release()
 
     def download_multi(self, batch_mode: bool):
-        if not pathlib.Path(self.getState("download.output")).is_dir() or self.getState("download.output") == "":
-            print("Invalid output directory!")
+        cfg = self.bulk_read("download.output", "download.single_link",
+                             "download.link_list", "download.additional_args",
+                             as_dict=True)
+
+        if not pathlib.Path(cfg["download.output"]).is_dir() or cfg["download.output"] == "":
+            self.log("error", "Invalid output directory!")
             return
 
         if not batch_mode:
-            ydl_urls = [self.getState("download.single_link")]
+            ydl_urls = [cfg["download.single_link"]]
         elif batch_mode:
-            ydl_path = pathlib.Path(self.getState("download.link_list"))
+            ydl_path = pathlib.Path(cfg["download.link_list"])
             if ydl_path.is_file() and ydl_path.suffix.lower() == ".txt":
                 with open(ydl_path) as file:
                     ydl_urls = file.readlines()
             else:
-                print("Invalid link list!")
+                self.log("error", "Invalid link list!")
                 return
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
             for url in ydl_urls:
                 executor.submit(self.__download_video,
-                                url.strip(), self.getState("download.output"), self.getState("download.additional_args"))
+                                url.strip(), cfg["download.output"], cfg["download.additional_args"])
 
-        print(f'Completed {len(ydl_urls)} downloads.')
+        self.log("info", f'Completed {len(ydl_urls)} downloads.')
 
     def __download_video(self, url: str, output_dir: str, output_args: str):
         url = (url or "").strip()
         if not url:
-            print("Empty URL, skipping download.")
+            self.log("warning", "Empty URL, skipping download.")
             return
 
         additional_args = shlex.split(output_args.strip()) if output_args and output_args.strip() else [] # Respect quotes and split into list
         cmd = ["yt-dlp", "-o", "%(title)s.%(ext)s", "-P", output_dir] + additional_args + [url]
 
-        print(f'Downloading {url}...')
+        self.log("info", f'Downloading {url}...')
         subprocess.run(cmd)
-        print(f'Download {url} done!')
+        self.log("info", f'Download {url} done!')

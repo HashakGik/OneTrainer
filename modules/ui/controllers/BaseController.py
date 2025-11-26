@@ -225,28 +225,28 @@ class BaseController:
     # These methods cannot use directly lambdas, because variable names would be reassigned within the loop.
     @staticmethod
     def __readCbx( ui_elem, var, model):
-        return lambda: model.setState(var, ui_elem.isChecked())
+        return lambda: model.set_state(var, ui_elem.isChecked())
 
     @staticmethod
     def __readCbm(ui_elem, var, model):
-        return lambda: model.setState(var, ui_elem.currentData())
+        return lambda: model.set_state(var, ui_elem.currentData())
 
     @staticmethod
     def __readSbx(ui_elem, var, model):
-        return lambda x: model.setState(var, x)
+        return lambda x: model.set_state(var, x)
 
     @staticmethod
     def __readSNLed(ui_elem, var, model):
-        return lambda: model.setState(var, float(ui_elem.text()))
+        return lambda: model.set_state(var, float(ui_elem.text()))
 
     @staticmethod
     def __readLed(ui_elem, var, model):
-        return lambda: model.setState(var, ui_elem.text())
+        return lambda: model.set_state(var, ui_elem.text())
 
     @staticmethod
     def _writeControl(ui_elem, var, model, *args): # Discard possible signal arguments.
         ui_elem.blockSignals(True)
-        val = model.getState(var)
+        val = model.get_state(var)
         if val is not None:
             if isinstance(ui_elem, QtW.QCheckBox):
                 ui_elem.setChecked(val)

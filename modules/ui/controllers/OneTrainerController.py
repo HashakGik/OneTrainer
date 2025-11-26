@@ -81,7 +81,7 @@ class OnetrainerController(BaseController):
     def __openTensorboard(self):
         @Slot()
         def f():
-            self._openUrl("http://localhost:" + str(StateModel.instance().getState("tensorboard_port")))
+            self._openUrl("http://localhost:" + str(StateModel.instance().get_state("tensorboard_port")))
         return f
 
     def __startDebug(self):

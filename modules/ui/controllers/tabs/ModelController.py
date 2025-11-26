@@ -67,7 +67,7 @@ class ModelController(BaseController):
                                filters=QCA.translate("filetype_filters",
                                                      "Safetensors (*.safetensors);;Diffusers (model_index.json);;Checkpoints (*.ckpt, *.pt, *.bin);;All Files (*.*)"))
 
-        self._connect(QtW.QApplication.instance().modelChanged, self.__updateModel(), update_after_connect=True, initial_args=[StateModel.instance().getState("model_type"), StateModel.instance().getState("training_method")])
+        self._connect(QtW.QApplication.instance().modelChanged, self.__updateModel(), update_after_connect=True, initial_args=[StateModel.instance().get_state("model_type"), StateModel.instance().get_state("training_method")])
 
     def _connectInputValidation(self):
         self._connect(self.ui.transformerLed.editingFinished, self.__forceGGUF(from_line_edit=True))

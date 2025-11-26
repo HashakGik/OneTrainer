@@ -99,7 +99,7 @@ class SamplingController(BaseController):
             for k, v in configs:
                 self.ui.configCmb.addItem(k, userData=v)
 
-            self.ui.configCmb.setCurrentIndex(self.ui.configCmb.findData(StateModel.instance().getState("sample_definition_file_name")))
+            self.ui.configCmb.setCurrentIndex(self.ui.configCmb.findData(StateModel.instance().get_state("sample_definition_file_name")))
         return f
 
     def __updateSamples(self):
@@ -111,7 +111,7 @@ class SamplingController(BaseController):
             self.ui.listWidget.clear()
             self.children = []
 
-            for idx, _ in enumerate(SampleModel.instance().getState("")):
+            for idx, _ in enumerate(SampleModel.instance().get_state("")):
                wdg = SampleController(self.loader, self.sample_params_window, idx, parent=self)
                self.children.append(wdg)
                self._appendWidget(self.ui.listWidget, wdg, self_delete_fn=self.__deleteSample(idx), self_clone_fn=self.__cloneSample(idx))

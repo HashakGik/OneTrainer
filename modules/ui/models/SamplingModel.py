@@ -19,7 +19,7 @@ import torch
 
 class SamplingModel(SingletonConfigModel):
     def __init__(self):
-        self.config = SampleConfig.default_values()
+        super().__init__(SampleConfig.default_values())
         self.model = None
         self.progress_fn = None
 
@@ -58,9 +58,9 @@ class SamplingModel(SingletonConfigModel):
                 else:  # fine-tunes
                     model_names.base_model = last_backup_path
 
-                print(f"Loading from backup '{last_backup_path}'...")
+                self.log("info", f"Loading from backup '{last_backup_path}'...")
             else:
-                print("No backup found, loading without backup...")
+                self.log("info", "No backup found, loading without backup...")
 
         model = model_loader.load(
             model_type=train_config.model_type,
@@ -88,7 +88,7 @@ class SamplingModel(SingletonConfigModel):
     def sample(self, progress_fn=None):
         self.progress_fn = progress_fn
 
-        with self.critical_region():
+        with self.critical_region_read():
             sample = copy.deepcopy(self.config)
 
         if TrainingModel.instance().training_commands is not None:
@@ -97,7 +97,7 @@ class SamplingModel(SingletonConfigModel):
 
             TrainingModel.instance().training_commands.sample_custom(sample)
         else:
-            with self.critical_region():
+            with StateModel.instance().critical_region_read():
                 train_config = TrainConfig.default_values().from_dict(StateModel.instance().config.to_dict())
 
             train_config.optimizer.optimizer = None

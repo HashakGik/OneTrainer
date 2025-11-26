@@ -187,7 +187,7 @@ class DatasetController(BaseController):
         @Slot()
         def f():
             diag = QtW.QFileDialog()
-            dir = diag.getExistingDirectory(parent=None, caption=QCA.translate("dialog_window", "Open Dataset directory"), dir=DatasetModel.instance().getState("path"))
+            dir = diag.getExistingDirectory(parent=None, caption=QCA.translate("dialog_window", "Open Dataset directory"), dir=DatasetModel.instance().get_state("path"))
 
             worker, name = WorkerPool.instance().createNamed(self.__scan(), name="open_dataset", dir=dir)
             if worker is not None:
@@ -292,9 +292,9 @@ class DatasetController(BaseController):
         def f():
             choice, new_mask, mask_path = self.__checkMaskChanged()
             if choice == QtW.QMessageBox.StandardButton.Yes:
-                new_mask = Image.fromarray(new_mask, "L")
+                new_mask_img = Image.fromarray(new_mask, "L")
                 MaskHistoryModel.instance().loadMask(new_mask)
-                new_mask.convert("RGB").save(mask_path)
+                new_mask_img.convert("RGB").save(mask_path)
 
         return f
 
@@ -380,7 +380,7 @@ class DatasetController(BaseController):
     def __browse(self):
         @Slot()
         def f():
-            path = DatasetModel.instance().getState("path")
+            path = DatasetModel.instance().get_state("path")
             if path is not None:
                 self._browse(path)
         return f
@@ -444,7 +444,7 @@ class DatasetController(BaseController):
 
     def __scan(self):
         def f(dir):
-            DatasetModel.instance().setState("path", dir)
+            DatasetModel.instance().set_state("path", dir)
             DatasetModel.instance().scan()
         return f
 
@@ -466,7 +466,7 @@ class DatasetController(BaseController):
 
     def __updateCanvas(self):
         if self.im is not None:
-            mask = np.clip(MaskHistoryModel.instance().getState("current_mask")[..., np.newaxis].astype(float), 1 - self.alpha, 1)
+            mask = np.clip(MaskHistoryModel.instance().get_state("current_mask")[..., np.newaxis].astype(float), 1 - self.alpha, 1)
             self.im.set_data((np.asarray(self.image) * mask).astype(np.uint8))
 
             self.canvas.draw_idle()
@@ -512,8 +512,8 @@ class DatasetController(BaseController):
         if cancel:
             buttons |= QtW.QMessageBox.StandardButton.Cancel
 
-        mask = MaskHistoryModel.instance().getState("original_mask")
-        new_mask = MaskHistoryModel.instance().getState("current_mask")
+        mask = MaskHistoryModel.instance().get_state("original_mask")
+        new_mask = MaskHistoryModel.instance().get_state("current_mask")
         mask_path, mask_exists = DatasetModel.instance().getMaskPath(self.current_image_path)
 
         choice = QtW.QMessageBox.StandardButton.No

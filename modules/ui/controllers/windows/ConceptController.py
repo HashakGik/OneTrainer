@@ -227,7 +227,7 @@ class ConceptController(BaseController):
     def __prevImage(self):
         @Slot()
         def f():
-            image_count = ConceptModel.instance().getState(f"{self.idx}.concept_stats.image_count")
+            image_count = ConceptModel.instance().get_state(f"{self.idx}.concept_stats.image_count")
             if image_count is not None and image_count > 0:
                 self.file_index = (self.file_index + image_count - 1) % image_count
             else:
@@ -238,7 +238,7 @@ class ConceptController(BaseController):
     def __nextImage(self):
         @Slot()
         def f():
-            image_count = ConceptModel.instance().getState(f"{self.idx}.concept_stats.image_count")
+            image_count = ConceptModel.instance().get_state(f"{self.idx}.concept_stats.image_count")
             if image_count is not None and image_count > 0:
                 self.file_index = (self.file_index + 1) % image_count
             else:
@@ -267,7 +267,7 @@ class ConceptController(BaseController):
     def __saveConcept(self):
         @Slot()
         def f():
-            ConceptModel.instance().setState(f"{self.idx}.name", self.ui.nameLed.text())
+            ConceptModel.instance().set_state(f"{self.idx}.name", self.ui.nameLed.text())
 
             # No need to store statistics, as they are handled directly by the model.
             QtW.QApplication.instance().conceptsChanged.emit()

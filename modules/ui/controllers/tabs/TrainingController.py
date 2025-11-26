@@ -173,8 +173,8 @@ class TrainingController(BaseController):
         self._connect(self.ui.tableWidget.currentCellChanged, self.__changeCell())
         self._connect(self.ui.updatePreviewBtn.clicked, self.__updatePreview())
 
-        self._connect(QtW.QApplication.instance().modelChanged, self.__updateModel(), update_after_connect=True, initial_args=[StateModel.instance().getState("model_type"),
-                 StateModel.instance().getState("training_method")])
+        self._connect(QtW.QApplication.instance().modelChanged, self.__updateModel(), update_after_connect=True, initial_args=[StateModel.instance().get_state("model_type"),
+                 StateModel.instance().get_state("training_method")])
 
 
         cb = self.__enableCustomScheduler()  # This must be connected after __updateModel, otherwise it will not enable/disable custom parameters correctly.
@@ -240,12 +240,12 @@ class TrainingController(BaseController):
         @Slot()
         def f():
             generator = TimestepGenerator(
-                timestep_distribution=StateModel.instance().getState("timestep_distribution"),
-                min_noising_strength=StateModel.instance().getState("min_noising_strength"),
-                max_noising_strength=StateModel.instance().getState("max_noising_strength"),
-                noising_weight=StateModel.instance().getState("noising_weight"),
-                noising_bias=StateModel.instance().getState("noising_bias"),
-                timestep_shift=StateModel.instance().getState("timestep_shift"),
+                timestep_distribution=StateModel.instance().get_state("timestep_distribution"),
+                min_noising_strength=StateModel.instance().get_state("min_noising_strength"),
+                max_noising_strength=StateModel.instance().get_state("max_noising_strength"),
+                noising_weight=StateModel.instance().get_state("noising_weight"),
+                noising_bias=StateModel.instance().get_state("noising_bias"),
+                timestep_shift=StateModel.instance().get_state("timestep_shift"),
             )
 
             self.ax.cla()
@@ -377,7 +377,7 @@ class TrainingController(BaseController):
     def __updateSchedulerParams(self):
         @Slot()
         def f():
-            param_dict = StateModel.instance().getState("scheduler_params")
+            param_dict = StateModel.instance().get_state("scheduler_params")
 
             self.ui.tableWidget.clearContents()
             for idx, param in enumerate(param_dict):

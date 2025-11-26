@@ -67,21 +67,22 @@ class InputPipelineModule(
 
 class ConceptModel(SingletonConfigModel):
     def __init__(self):
-        self.config = []
+        super().__init__([])
         self.cancel_scan_flag = threading.Event()
 
-    @SingletonConfigModel.atomic
     def __len__(self):
-        return len(self.config)
+        with self.critical_region_read():
+            return len(self.config)
 
-    @SingletonConfigModel.atomic
+
     def get_random_seed(self):
         return ConceptConfig.default_values().seed
 
-    @SingletonConfigModel.atomic
+
     def get_concept_name(self, idx):
-        name = self.config[idx].name
-        path = self.config[idx].path
+        with self.critical_region_read():
+            name = self.config[idx].name
+            path = self.config[idx].path
 
         if name is not None and name != "":
             return name
@@ -90,56 +91,53 @@ class ConceptModel(SingletonConfigModel):
         else:
             return ""
 
-    @SingletonConfigModel.atomic
     def toggle_concepts(self):
         some_enabled = self.some_concepts_enabled()
 
-        for c in self.config:
-            c.enabled = not some_enabled
+        with self.critical_region_write():
+            for c in self.config:
+                c.enabled = not some_enabled
 
-    @SingletonConfigModel.atomic
     def get_filtered_concepts(self, query="", type=ConceptType.ALL, show_disabled=True):
-        filtered_concepts = []
-        for c in self.config:
-            if show_disabled or c.enabled:
-                if type == ConceptType.ALL or c.type == type:
-                    if query == "" or query.strip() in c.name:
-                        filtered_concepts.append(c)
+
+        with self.critical_region_read():
+            filtered_concepts = [c for c in self.config
+                                 if (show_disabled or c.enabled) and
+                                 (type == ConceptType.ALL or c.type == type) and
+                                 (query == "" or query.strip() in c.name)]
 
         return filtered_concepts
 
 
-    @SingletonConfigModel.atomic
     def some_concepts_enabled(self):
         out = False
-        for c in self.config:
-            out |= c.enabled
+        with self.critical_region_read():
+            for c in self.config:
+                out |= c.enabled
         return out
 
-    @SingletonConfigModel.atomic
     def create_new_concept(self):
-        con_cfg = ConceptConfig.default_values()
-        self.config.append(con_cfg)
+        with self.critical_region_write():
+            con_cfg = ConceptConfig.default_values()
+            self.config.append(con_cfg)
 
-    @SingletonConfigModel.atomic
     def clone_concept(self, idx):
-        new_element = copy.deepcopy(self.config[idx])
-        self.config.append(new_element)
+        with self.critical_region_write():
+            new_element = copy.deepcopy(self.config[idx])
+            self.config.append(new_element)
 
-    @SingletonConfigModel.atomic
     def delete_concept(self, idx):
-        self.config.pop(idx)
+        with self.critical_region_write():
+            self.config.pop(idx)
 
-    @SingletonConfigModel.atomic
     def save_config(self, path="training_concepts"):
         if not os.path.exists(path):
             os.mkdir(path)
 
-        config_path = StateModel.instance().getState("concept_file_name") # IMPORTANT! The mutex is shared because it is defined in the base class, this must be called before the lock!
+        config_path = StateModel.instance().get_state("concept_file_name")
+        with self.critical_region_read():
+            write_json_atomic(config_path, [element.to_dict() for element in self.config])
 
-        write_json_atomic(config_path, [element.to_dict() for element in self.config])
-
-    @SingletonConfigModel.atomic
     def load_config(self, filename, path="training_concepts"):
         if not os.path.exists(path):
             os.mkdir(path)
@@ -148,17 +146,17 @@ class ConceptModel(SingletonConfigModel):
             filename = "concepts"
 
         config_file = path_util.canonical_join(path, f"{filename}.json")
-        StateModel.instance().setState("concept_file_name", config_file)
+        StateModel.instance().set_state("concept_file_name", config_file)
 
-        self.config = []
+        with self.critical_region_write():
+            self.config = []
 
-        if os.path.exists(config_file):
-
-            with open(config_file, "r") as f:
-                loaded_config_json = json.load(f)
-                for element_json in loaded_config_json:
-                    element = ConceptConfig.default_values().from_dict(element_json)
-                    self.config.append(element)
+            if os.path.exists(config_file):
+                with open(config_file, "r") as f:
+                    loaded_config_json = json.load(f)
+                    for element_json in loaded_config_json:
+                        element = ConceptConfig.default_values().from_dict(element_json)
+                        self.config.append(element)
 
     @staticmethod
     def get_concept_path(path):
@@ -170,12 +168,14 @@ class ConceptModel(SingletonConfigModel):
         except Exception:
             return None
 
-    @SingletonConfigModel.atomic
+    #@SingletonConfigModel.atomic
     def get_preview_icon(self, idx):
         preview_path = "resources/icons/icon.png"
-        glob_pattern = "**/*.*" if self.getState(f"{idx}.include_subdirectories") else "*.*"
 
-        concept_path = self.get_concept_path(self.getState(f"{idx}.path"))
+        with self.critical_region_read():
+            glob_pattern = "**/*.*" if self.get_state(f"{idx}.include_subdirectories") else "*.*"
+            concept_path = self.get_concept_path(self.get_state(f"{idx}.path"))
+
         if concept_path:
             for path in pathlib.Path(concept_path).glob(glob_pattern):
                 extension = os.path.splitext(path)[1]
@@ -197,9 +197,8 @@ class ConceptModel(SingletonConfigModel):
 
     def download_dataset(self, idx):
         # Exception handled by WorkerPool.
-        huggingface_hub.login(token=StateModel.instance().getState("secrets.huggingface_token"), new_session=False)
-        huggingface_hub.snapshot_download(repo_id=self.getState(f"{idx}.path"), repo_type="dataset")
-
+        huggingface_hub.login(token=StateModel.instance().get_state("secrets.huggingface_token"), new_session=False)
+        huggingface_hub.snapshot_download(repo_id=self.get_state(f"{idx}.path"), repo_type="dataset")
 
     def get_preview_prompt(self, filename, show_augmentations):
         empty_msg = "[Empty prompt]"
@@ -223,10 +222,11 @@ class ConceptModel(SingletonConfigModel):
             return "[Invalid file encoding. This should not happen, please report this issue]"
 
     def get_concept_stats(self, idx, advanced_checks, wait_time=60):
-        path = self.getState(f"{idx}.path")
-        include_subdirectories = self.getState(f"{idx}.include_subdirectories")
+        path, include_subdirectories, concept = self.bulk_read(f"{idx}.path", f"{idx}.include_subdirectories", str(idx))
+
+
         if not os.path.isdir(path):
-            print(f"Unable to get statistics for invalid concept path: {path}")
+            self.log("error", f"Unable to get statistics for invalid concept path: {path}")
             return
         start_time = time.perf_counter()
         self.cancel_scan_flag.clear()
@@ -234,7 +234,7 @@ class ConceptModel(SingletonConfigModel):
         concept_path = self.get_concept_path(path)
 
         if not concept_path:
-            print(f"Unable to get statistics for invalid concept path: {path}")
+            self.log("error", f"Unable to get statistics for invalid concept path: {path}")
             return
         subfolders = [concept_path]
 
@@ -242,15 +242,15 @@ class ConceptModel(SingletonConfigModel):
         for path in subfolders:
             if self.cancel_scan_flag.is_set() or time.perf_counter() - start_time > wait_time:
                 break
-            stats_dict = concept_stats.folder_scan(path, stats_dict, advanced_checks, self.getState(idx), start_time, wait_time, self.cancel_scan_flag)
+            stats_dict = concept_stats.folder_scan(path, stats_dict, advanced_checks, concept, start_time, wait_time, self.cancel_scan_flag)
             if include_subdirectories and not self.cancel_scan_flag.is_set():     #add all subfolders of current directory to for loop
                 subfolders.extend([f for f in os.scandir(path) if f.is_dir()])
 
-            self.setState(f"{idx}.concept_stats", stats_dict)
+            self.set_state(f"{idx}.concept_stats", stats_dict)
         self.cancel_scan_flag.clear()
 
     def pretty_print_stats(self, idx):
-        concept_stats = self.getState(f"{idx}.concept_stats")
+        concept_stats = self.get_state(f"{idx}.concept_stats")
         formatted_stats = {}
 
         if len(concept_stats) == 0:
@@ -379,171 +379,171 @@ class ConceptModel(SingletonConfigModel):
         aspect_string = f'{aspect_fraction.denominator}:{aspect_fraction.numerator}'
         return aspect_string
 
-    @SingletonConfigModel.atomic
     def getImage(self, idx, image_id, show_augmentations=False):
-        preview_image_path = "resources/icons/icon.png"
-        file_index = -1
-        glob_pattern = "**/*.*" if self.getState(f"{idx}.include_subdirectories") else "*.*"
+        with self.critical_region_read():
+            preview_image_path = "resources/icons/icon.png"
+            file_index = -1
+            glob_pattern = "**/*.*" if self.get_state(f"{idx}.include_subdirectories") else "*.*"
 
-        concept_path = self.get_concept_path(self.getState(f"{idx}.path"))
-        if concept_path:
-            for path in pathlib.Path(concept_path).glob(glob_pattern):
-                extension = os.path.splitext(path)[1]
-                if path.is_file() and path_util.is_supported_image_extension(extension) \
-                        and not path.name.endswith("-masklabel.png") and not path.name.endswith("-condlabel.png"):
-                    preview_image_path = path_util.canonical_join(concept_path, path)
-                    file_index += 1
-                    if file_index == image_id:
-                        break
+            concept_path = self.get_concept_path(self.get_state(f"{idx}.path"))
+            if concept_path:
+                for path in pathlib.Path(concept_path).glob(glob_pattern):
+                    extension = os.path.splitext(path)[1]
+                    if path.is_file() and path_util.is_supported_image_extension(extension) \
+                            and not path.name.endswith("-masklabel.png") and not path.name.endswith("-condlabel.png"):
+                        preview_image_path = path_util.canonical_join(concept_path, path)
+                        file_index += 1
+                        if file_index == image_id:
+                            break
 
-        image = load_image(preview_image_path, 'RGB')
-        image_tensor = functional.to_tensor(image)
+            image = load_image(preview_image_path, 'RGB')
+            image_tensor = functional.to_tensor(image)
 
-        splitext = os.path.splitext(preview_image_path)
-        preview_mask_path = path_util.canonical_join(splitext[0] + "-masklabel.png")
-        if not os.path.isfile(preview_mask_path):
-            preview_mask_path = None
+            splitext = os.path.splitext(preview_image_path)
+            preview_mask_path = path_util.canonical_join(splitext[0] + "-masklabel.png")
+            if not os.path.isfile(preview_mask_path):
+                preview_mask_path = None
 
-        if preview_mask_path:
-            mask = Image.open(preview_mask_path).convert("L")
-            mask_tensor = functional.to_tensor(mask)
-        else:
-            mask_tensor = torch.ones((1, image_tensor.shape[1], image_tensor.shape[2]))
+            if preview_mask_path:
+                mask = Image.open(preview_mask_path).convert("L")
+                mask_tensor = functional.to_tensor(mask)
+            else:
+                mask_tensor = torch.ones((1, image_tensor.shape[1], image_tensor.shape[2]))
 
-        source = self.getState(f"{idx}.text.prompt_source")
-        preview_p = pathlib.Path(preview_image_path)
-        if source == "filename":
-            prompt_output = preview_p.stem or "[Empty prompt]"
-        else:
-            file_map = {
-                "sample": preview_p.with_suffix(".txt"),
-                "concept": pathlib.Path(self.getState(f"{idx}.text.prompt_path")) if self.getState(f"{idx}.text.prompt_path") else None,
-            }
-            file_path = file_map.get(source)
-            prompt_output = self.get_preview_prompt(str(file_path), show_augmentations) if file_path else "[Empty prompt]"
+            source = self.get_state(f"{idx}.text.prompt_source")
+            preview_p = pathlib.Path(preview_image_path)
+            if source == "filename":
+                prompt_output = preview_p.stem or "[Empty prompt]"
+            else:
+                file_map = {
+                    "sample": preview_p.with_suffix(".txt"),
+                    "concept": pathlib.Path(self.get_state(f"{idx}.text.prompt_path")) if self.get_state(f"{idx}.text.prompt_path") else None,
+                }
+                file_path = file_map.get(source)
+                prompt_output = self.get_preview_prompt(str(file_path), show_augmentations) if file_path else "[Empty prompt]"
 
-        modules = []
-        if show_augmentations:
-            input_module = InputPipelineModule({
-                'true': True,
-                'image': image_tensor,
-                'mask': mask_tensor,
-                'enable_random_flip': self.getState(f"{idx}.image.enable_random_flip"),
-                'enable_fixed_flip': self.getState(f"{idx}.image.enable_fixed_flip"),
-                'enable_random_rotate': self.getState(f"{idx}.image.enable_random_rotate"),
-                'enable_fixed_rotate': self.getState(f"{idx}.image.enable_fixed_rotate"),
-                'random_rotate_max_angle': self.getState(f"{idx}.image.random_rotate_max_angle"),
-                'enable_random_brightness': self.getState(f"{idx}.image.enable_random_brightness"),
-                'enable_fixed_brightness': self.getState(f"{idx}.image.enable_fixed_brightness"),
-                'random_brightness_max_strength': self.getState(f"{idx}.image.random_brightness_max_strength"),
-                'enable_random_contrast': self.getState(f"{idx}.image.enable_random_contrast"),
-                'enable_fixed_contrast': self.getState(f"{idx}.image.enable_fixed_contrast"),
-                'random_contrast_max_strength': self.getState(f"{idx}.image.random_contrast_max_strength"),
-                'enable_random_saturation': self.getState(f"{idx}.image.enable_random_saturation"),
-                'enable_fixed_saturation': self.getState(f"{idx}.image.enable_fixed_saturation"),
-                'random_saturation_max_strength': self.getState(f"{idx}.image.random_saturation_max_strength"),
-                'enable_random_hue': self.getState(f"{idx}.image.enable_random_hue"),
-                'enable_fixed_hue': self.getState(f"{idx}.image.enable_fixed_hue"),
-                'random_hue_max_strength': self.getState(f"{idx}.image.random_hue_max_strength"),
-                'enable_random_circular_mask_shrink': self.getState(f"{idx}.image.enable_random_circular_mask_shrink"),
-                'enable_random_mask_rotate_crop': self.getState(f"{idx}.image.enable_random_mask_rotate_crop"),
+            modules = []
+            if show_augmentations:
+                input_module = InputPipelineModule({
+                    'true': True,
+                    'image': image_tensor,
+                    'mask': mask_tensor,
+                    'enable_random_flip': self.get_state(f"{idx}.image.enable_random_flip"),
+                    'enable_fixed_flip': self.get_state(f"{idx}.image.enable_fixed_flip"),
+                    'enable_random_rotate': self.get_state(f"{idx}.image.enable_random_rotate"),
+                    'enable_fixed_rotate': self.get_state(f"{idx}.image.enable_fixed_rotate"),
+                    'random_rotate_max_angle': self.get_state(f"{idx}.image.random_rotate_max_angle"),
+                    'enable_random_brightness': self.get_state(f"{idx}.image.enable_random_brightness"),
+                    'enable_fixed_brightness': self.get_state(f"{idx}.image.enable_fixed_brightness"),
+                    'random_brightness_max_strength': self.get_state(f"{idx}.image.random_brightness_max_strength"),
+                    'enable_random_contrast': self.get_state(f"{idx}.image.enable_random_contrast"),
+                    'enable_fixed_contrast': self.get_state(f"{idx}.image.enable_fixed_contrast"),
+                    'random_contrast_max_strength': self.get_state(f"{idx}.image.random_contrast_max_strength"),
+                    'enable_random_saturation': self.get_state(f"{idx}.image.enable_random_saturation"),
+                    'enable_fixed_saturation': self.get_state(f"{idx}.image.enable_fixed_saturation"),
+                    'random_saturation_max_strength': self.get_state(f"{idx}.image.random_saturation_max_strength"),
+                    'enable_random_hue': self.get_state(f"{idx}.image.enable_random_hue"),
+                    'enable_fixed_hue': self.get_state(f"{idx}.image.enable_fixed_hue"),
+                    'random_hue_max_strength': self.get_state(f"{idx}.image.random_hue_max_strength"),
+                    'enable_random_circular_mask_shrink': self.get_state(f"{idx}.image.enable_random_circular_mask_shrink"),
+                    'enable_random_mask_rotate_crop': self.get_state(f"{idx}.image.enable_random_mask_rotate_crop"),
 
-                'prompt': prompt_output,
-                'tag_dropout_enable': self.getState(f"{idx}.text.tag_dropout_enable"),
-                'tag_dropout_probability': self.getState(f"{idx}.text.tag_dropout_probability"),
-                'tag_dropout_mode': self.getState(f"{idx}.text.tag_dropout_mode"),
-                'tag_dropout_special_tags': self.getState(f"{idx}.text.tag_dropout_special_tags"),
-                'tag_dropout_special_tags_mode': self.getState(f"{idx}.text.tag_dropout_special_tags_mode"),
-                'tag_delimiter': self.getState(f"{idx}.text.tag_delimiter"),
-                'keep_tags_count': self.getState(f"{idx}.text.keep_tags_count"),
-                'tag_dropout_special_tags_regex': self.getState(f"{idx}.text.tag_dropout_special_tags_regex"),
-                'caps_randomize_enable': self.getState(f"{idx}.text.caps_randomize_enable"),
-                'caps_randomize_probability': self.getState(f"{idx}.text.caps_randomize_probability"),
-                'caps_randomize_mode': self.getState(f"{idx}.text.caps_randomize_mode"),
-                'caps_randomize_lowercase': self.getState(f"{idx}.text.caps_randomize_lowercase"),
-                'enable_tag_shuffling': self.getState(f"{idx}.text.enable_tag_shuffling"),
-            })
+                    'prompt': prompt_output,
+                    'tag_dropout_enable': self.get_state(f"{idx}.text.tag_dropout_enable"),
+                    'tag_dropout_probability': self.get_state(f"{idx}.text.tag_dropout_probability"),
+                    'tag_dropout_mode': self.get_state(f"{idx}.text.tag_dropout_mode"),
+                    'tag_dropout_special_tags': self.get_state(f"{idx}.text.tag_dropout_special_tags"),
+                    'tag_dropout_special_tags_mode': self.get_state(f"{idx}.text.tag_dropout_special_tags_mode"),
+                    'tag_delimiter': self.get_state(f"{idx}.text.tag_delimiter"),
+                    'keep_tags_count': self.get_state(f"{idx}.text.keep_tags_count"),
+                    'tag_dropout_special_tags_regex': self.get_state(f"{idx}.text.tag_dropout_special_tags_regex"),
+                    'caps_randomize_enable': self.get_state(f"{idx}.text.caps_randomize_enable"),
+                    'caps_randomize_probability': self.get_state(f"{idx}.text.caps_randomize_probability"),
+                    'caps_randomize_mode': self.get_state(f"{idx}.text.caps_randomize_mode"),
+                    'caps_randomize_lowercase': self.get_state(f"{idx}.text.caps_randomize_lowercase"),
+                    'enable_tag_shuffling': self.get_state(f"{idx}.text.enable_tag_shuffling"),
+                })
 
-            circular_mask_shrink = RandomCircularMaskShrink(mask_name='mask', shrink_probability=1.0,
-                                                            shrink_factor_min=0.2, shrink_factor_max=1.0,
-                                                            enabled_in_name='enable_random_circular_mask_shrink')
-            random_mask_rotate_crop = RandomMaskRotateCrop(mask_name='mask', additional_names=['image'], min_size=512,
-                                                           min_padding_percent=10, max_padding_percent=30,
-                                                           max_rotate_angle=20,
-                                                           enabled_in_name='enable_random_mask_rotate_crop')
-            random_flip = RandomFlip(names=['image', 'mask'], enabled_in_name='enable_random_flip',
-                                     fixed_enabled_in_name='enable_fixed_flip')
-            random_rotate = RandomRotate(names=['image', 'mask'], enabled_in_name='enable_random_rotate',
-                                         fixed_enabled_in_name='enable_fixed_rotate',
-                                         max_angle_in_name='random_rotate_max_angle')
-            random_brightness = RandomBrightness(names=['image'], enabled_in_name='enable_random_brightness',
-                                                 fixed_enabled_in_name='enable_fixed_brightness',
-                                                 max_strength_in_name='random_brightness_max_strength')
-            random_contrast = RandomContrast(names=['image'], enabled_in_name='enable_random_contrast',
-                                             fixed_enabled_in_name='enable_fixed_contrast',
-                                             max_strength_in_name='random_contrast_max_strength')
-            random_saturation = RandomSaturation(names=['image'], enabled_in_name='enable_random_saturation',
-                                                 fixed_enabled_in_name='enable_fixed_saturation',
-                                                 max_strength_in_name='random_saturation_max_strength')
-            random_hue = RandomHue(names=['image'], enabled_in_name='enable_random_hue',
-                                   fixed_enabled_in_name='enable_fixed_hue',
-                                   max_strength_in_name='random_hue_max_strength')
-            drop_tags = DropTags(text_in_name='prompt', enabled_in_name='tag_dropout_enable',
-                                 probability_in_name='tag_dropout_probability', dropout_mode_in_name='tag_dropout_mode',
-                                 special_tags_in_name='tag_dropout_special_tags',
-                                 special_tag_mode_in_name='tag_dropout_special_tags_mode',
-                                 delimiter_in_name='tag_delimiter',
-                                 keep_tags_count_in_name='keep_tags_count', text_out_name='prompt',
-                                 regex_enabled_in_name='tag_dropout_special_tags_regex')
-            caps_randomize = CapitalizeTags(text_in_name='prompt', enabled_in_name='caps_randomize_enable',
-                                            probability_in_name='caps_randomize_probability',
-                                            capitalize_mode_in_name='caps_randomize_mode',
-                                            delimiter_in_name='tag_delimiter',
-                                            convert_lowercase_in_name='caps_randomize_lowercase',
-                                            text_out_name='prompt')
-            shuffle_tags = ShuffleTags(text_in_name='prompt', enabled_in_name='enable_tag_shuffling',
-                                       delimiter_in_name='tag_delimiter', keep_tags_count_in_name='keep_tags_count',
-                                       text_out_name='prompt')
-            output_module = OutputPipelineModule(['image', 'mask', 'prompt'])
+                circular_mask_shrink = RandomCircularMaskShrink(mask_name='mask', shrink_probability=1.0,
+                                                                shrink_factor_min=0.2, shrink_factor_max=1.0,
+                                                                enabled_in_name='enable_random_circular_mask_shrink')
+                random_mask_rotate_crop = RandomMaskRotateCrop(mask_name='mask', additional_names=['image'], min_size=512,
+                                                               min_padding_percent=10, max_padding_percent=30,
+                                                               max_rotate_angle=20,
+                                                               enabled_in_name='enable_random_mask_rotate_crop')
+                random_flip = RandomFlip(names=['image', 'mask'], enabled_in_name='enable_random_flip',
+                                         fixed_enabled_in_name='enable_fixed_flip')
+                random_rotate = RandomRotate(names=['image', 'mask'], enabled_in_name='enable_random_rotate',
+                                             fixed_enabled_in_name='enable_fixed_rotate',
+                                             max_angle_in_name='random_rotate_max_angle')
+                random_brightness = RandomBrightness(names=['image'], enabled_in_name='enable_random_brightness',
+                                                     fixed_enabled_in_name='enable_fixed_brightness',
+                                                     max_strength_in_name='random_brightness_max_strength')
+                random_contrast = RandomContrast(names=['image'], enabled_in_name='enable_random_contrast',
+                                                 fixed_enabled_in_name='enable_fixed_contrast',
+                                                 max_strength_in_name='random_contrast_max_strength')
+                random_saturation = RandomSaturation(names=['image'], enabled_in_name='enable_random_saturation',
+                                                     fixed_enabled_in_name='enable_fixed_saturation',
+                                                     max_strength_in_name='random_saturation_max_strength')
+                random_hue = RandomHue(names=['image'], enabled_in_name='enable_random_hue',
+                                       fixed_enabled_in_name='enable_fixed_hue',
+                                       max_strength_in_name='random_hue_max_strength')
+                drop_tags = DropTags(text_in_name='prompt', enabled_in_name='tag_dropout_enable',
+                                     probability_in_name='tag_dropout_probability', dropout_mode_in_name='tag_dropout_mode',
+                                     special_tags_in_name='tag_dropout_special_tags',
+                                     special_tag_mode_in_name='tag_dropout_special_tags_mode',
+                                     delimiter_in_name='tag_delimiter',
+                                     keep_tags_count_in_name='keep_tags_count', text_out_name='prompt',
+                                     regex_enabled_in_name='tag_dropout_special_tags_regex')
+                caps_randomize = CapitalizeTags(text_in_name='prompt', enabled_in_name='caps_randomize_enable',
+                                                probability_in_name='caps_randomize_probability',
+                                                capitalize_mode_in_name='caps_randomize_mode',
+                                                delimiter_in_name='tag_delimiter',
+                                                convert_lowercase_in_name='caps_randomize_lowercase',
+                                                text_out_name='prompt')
+                shuffle_tags = ShuffleTags(text_in_name='prompt', enabled_in_name='enable_tag_shuffling',
+                                           delimiter_in_name='tag_delimiter', keep_tags_count_in_name='keep_tags_count',
+                                           text_out_name='prompt')
+                output_module = OutputPipelineModule(['image', 'mask', 'prompt'])
 
-            modules = [
-                input_module,
-                circular_mask_shrink,
-                random_mask_rotate_crop,
-                random_flip,
-                random_rotate,
-                random_brightness,
-                random_contrast,
-                random_saturation,
-                random_hue,
-                drop_tags,
-                caps_randomize,
-                shuffle_tags,
-                output_module,
-            ]
+                modules = [
+                    input_module,
+                    circular_mask_shrink,
+                    random_mask_rotate_crop,
+                    random_flip,
+                    random_rotate,
+                    random_brightness,
+                    random_contrast,
+                    random_saturation,
+                    random_hue,
+                    drop_tags,
+                    caps_randomize,
+                    shuffle_tags,
+                    output_module,
+                ]
 
-            pipeline = LoadingPipeline(
-                device=torch.device('cpu'),
-                modules=modules,
-                batch_size=1,
-                seed=random.randint(0, 2 ** 30),
-                state=None,
-                initial_epoch=0,
-                initial_index=0,
-            )
+                pipeline = LoadingPipeline(
+                    device=torch.device('cpu'),
+                    modules=modules,
+                    batch_size=1,
+                    seed=random.randint(0, 2 ** 30),
+                    state=None,
+                    initial_epoch=0,
+                    initial_index=0,
+                )
 
-            data = pipeline.__next__()
-            image_tensor = data['image']
-            mask_tensor = data['mask']
-            prompt_output = data['prompt']
+                data = pipeline.__next__()
+                image_tensor = data['image']
+                mask_tensor = data['mask']
+                prompt_output = data['prompt']
 
-        filename_output = os.path.basename(preview_image_path)
+            filename_output = os.path.basename(preview_image_path)
 
-        mask_tensor = torch.clamp(mask_tensor, 0.3, 1)
-        image_tensor = image_tensor * mask_tensor
+            mask_tensor = torch.clamp(mask_tensor, 0.3, 1)
+            image_tensor = image_tensor * mask_tensor
 
-        image = functional.to_pil_image(image_tensor)
+            image = functional.to_pil_image(image_tensor)
 
-        image.thumbnail((300, 300))
+            image.thumbnail((300, 300))
 
-        return image, filename_output, prompt_output
+            return image, filename_output, prompt_output

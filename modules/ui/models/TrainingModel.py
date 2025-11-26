@@ -15,57 +15,69 @@ import torch
 
 
 class TrainingModel(SingletonConfigModel):
-    def __init__(self, parent=None):
-        self.config = None
+    def __init__(self):
+        super().__init__(None)
         self.training_commands = None
+        self.training_callbacks = None
+        self.train_config = None
 
     def backup_now(self):
-        train_commands = self.training_commands
-        if train_commands:
-            train_commands.backup()
+        with self.critical_region_read():
+            if self.training_commands:
+                self.training_commands.backup()
 
     def save_now(self):
-        train_commands = self.training_commands
-        if train_commands:
-            train_commands.save()
+        with self.critical_region_read():
+            if self.training_commands:
+                self.training_commands.save()
 
     def sample_now(self):
-        train_commands = self.training_commands
-        if train_commands:
-            train_commands.sample_default()
+        with self.critical_region_read():
+            if self.training_commands:
+                self.training_commands.sample_default()
 
     def train(self, reattach=False, progress_fn=None):
         self.progress_fn = progress_fn
 
-        StateModel.instance().save_default()
-        with self.critical_region():
-            self.train_config = TrainConfig.default_values().from_dict(StateModel.instance().config.to_dict())
+        cfg = StateModel.instance().bulk_read("tensorboard", "tensorboard_always_on",
+                                              "cloud.enabled",
+                                              as_dict=True)
 
-        if StateModel.instance().getState("tensorboard") and not StateModel.instance().getState("tensorboard_always_on") and StateModel.instance().tensorboard_subprocess is not None:
+
+        StateModel.instance().save_default()
+
+        if cfg["tensorboard"] and not cfg["tensorboard_always_on"] and StateModel.instance().tensorboard_subprocess is not None:
             StateModel.instance().stop_tensorboard()
 
-        self.training_commands = TrainCommands()
-        torch_gc()
+        with self.critical_region_write():
+            self.training_commands = TrainCommands()
 
-        error_caught = False
-        self.training_callbacks = TrainCallbacks(
-            on_update_train_progress=self.__on_update_train_progress(),
-            on_update_status=self.__on_update_status(),
-        )
+            self.training_callbacks = TrainCallbacks(
+                on_update_train_progress=self.__on_update_train_progress(),
+                on_update_status=self.__on_update_status(),
+            )
 
-        trainer = create.create_trainer(self.train_config, self.training_callbacks, self.training_commands,
-                                        reattach=reattach)
+            with StateModel.instance().critical_region_read():
+                self.train_config = TrainConfig.default_values().from_dict(StateModel.instance().config.to_dict())
+
+            torch_gc()
+
+            error_caught = False
+
+
+            trainer = create.create_trainer(self.train_config, self.training_callbacks, self.training_commands,
+                                            reattach=reattach)
         try:
             trainer.start()
-            if StateModel.instance().getState("cloud.enabled"):
-                StateModel.instance().setState("secrets.cloud", self.train_config.secrets.cloud)
+            if cfg["cloud.enabled"]:
+                StateModel.instance().set_state("secrets.cloud", self.train_config.secrets.cloud)
             self.start_time = time.monotonic()
             trainer.train()
         except Exception:
-            if StateModel.instance().getState("cloud.enabled"):
-                StateModel.instance().setState("secrets.cloud", self.train_config.secrets.cloud)
+            if cfg["cloud.enabled"]:
+                StateModel.instance().set_state("secrets.cloud", self.train_config.secrets.cloud)
             error_caught = True
-            traceback.print_exc()
+            self.log("critical", traceback.format_exc())
 
         trainer.end()
 
@@ -73,7 +85,8 @@ class TrainingModel(SingletonConfigModel):
         del trainer
 
         self.training_thread = None
-        self.training_commands = None
+        with self.critical_region_write():
+            self.training_commands = None
         torch.clear_autocast_cache()
         torch_gc()
 
@@ -84,7 +97,7 @@ class TrainingModel(SingletonConfigModel):
             if self.progress_fn is not None:
                 self.progress_fn({"status": "Stopped", "event": "finished"})
 
-        if StateModel.instance().getState("tensorboard_always_on") and StateModel.instance().tensorboard_subprocess is not None:
+        if cfg["tensorboard_always_on"] and StateModel.instance().tensorboard_subprocess is not None:
             StateModel.instance().start_tensorboard()
 
 

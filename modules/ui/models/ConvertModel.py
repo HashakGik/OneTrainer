@@ -11,50 +11,54 @@ from modules.util.torch_util import torch_gc
 
 class ConvertModel(SingletonConfigModel):
     def __init__(self):
-        self.config = ConvertModelArgs.default_values()
+        super().__init__(ConvertModelArgs.default_values())
 
     def convert_model(self):
+        cfg = self.bulk_read("model_type", "training_method", "input_name",
+                             "output_model_destination", "output_model_format", "output_dtype",
+                             as_dict=True)
+
         try:
             model_loader = create.create_model_loader(
-                model_type=self.getState("model_type"),
-                training_method=self.getState("training_method")
+                model_type=cfg["model_type"],
+                training_method=cfg["training_method"]
             )
             model_saver = create.create_model_saver(
-                model_type=self.getState("model_type"),
-                training_method=self.getState("training_method")
+                model_type=cfg["model_type"],
+                training_method=cfg["training_method"]
             )
 
-            print("Loading model " + self.getState("input_name"))
-            if self.getState("training_method") in [TrainingMethod.FINE_TUNE]:
+            print("Loading model " + cfg["input_name"])
+            if cfg["training_method"] in [TrainingMethod.FINE_TUNE]:
                 model = model_loader.load(
-                    model_type=self.getState("model_type"),
+                    model_type=cfg["model_type"],
                     model_names=ModelNames(
-                        base_model=self.getState("input_name"),
+                        base_model=cfg["input_name"],
                     ),
                     weight_dtypes=self.config.weight_dtypes(),
                 )
-            elif self.getState("training_method") in [TrainingMethod.LORA, TrainingMethod.EMBEDDING]:
+            elif cfg["training_method"] in [TrainingMethod.LORA, TrainingMethod.EMBEDDING]:
                 model = model_loader.load(
-                    model_type=self.getState("model_type"),
+                    model_type=cfg["model_type"],
                     model_names=ModelNames(
-                        lora=self.getState("input_name"),
-                        embedding=EmbeddingName(str(uuid4()), self.getState("input_name")),
+                        lora=cfg["input_name"],
+                        embedding=EmbeddingName(str(uuid4()), cfg["input_name"]),
                     ),
                     weight_dtypes=self.config.weight_dtypes(),
                 )
             else:
-                raise Exception("could not load model: " + self.getState("input_name"))
+                raise Exception("could not load model: " + cfg["input_name"])
 
-            print("Saving model " + self.getState("output_model_destination"))
+            self.log("info", "Saving model " + cfg["output_model_destination"])
             model_saver.save(
                 model=model,
-                model_type=self.getState("model_type"),
-                output_model_format=self.getState("output_model_format"),
-                output_model_destination=self.getState("output_model_destination"),
-                dtype=self.getState("output_dtype").torch_dtype(),
+                model_type=cfg["model_type"],
+                output_model_format=cfg["output_model_format"],
+                output_model_destination=cfg["output_model_destination"],
+                dtype=cfg["output_dtype"].torch_dtype(),
             )
-            print("Model converted")
+            self.log("info", "Model converted")
         except Exception:
-            traceback.print_exc()
+            self.log("critical", traceback.format_exc())
         finally:
             torch_gc()

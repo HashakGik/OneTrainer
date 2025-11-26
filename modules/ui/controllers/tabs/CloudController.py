@@ -120,7 +120,7 @@ class CloudController(BaseController):
     def __createCloud(self):
         @Slot()
         def f():
-            if StateModel.instance().getState("cloud.type") == CloudType.RUNPOD:
+            if StateModel.instance().get_state("cloud.type") == CloudType.RUNPOD:
                 self._openUrl("https://www.runpod.io/console/deploy?template=1a33vbssq9&type=gpu")
         return f
 

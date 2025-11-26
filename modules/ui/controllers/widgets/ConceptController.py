@@ -33,14 +33,14 @@ class ConceptController(BaseController):
     def __enableConcept(self):
         @Slot()
         def f():
-            ConceptModel.instance().setState(f"{self.idx}.enabled", self.ui.enableCbx.isChecked())
+            ConceptModel.instance().set_state(f"{self.idx}.enabled", self.ui.enableCbx.isChecked())
             QtW.QApplication.instance().conceptsChanged.emit()
         return f
 
     def __updateConcept(self):
         @Slot()
         def f():
-            self.ui.enableCbx.setChecked(ConceptModel.instance().getState(f"{self.idx}.enabled"))
+            self.ui.enableCbx.setChecked(ConceptModel.instance().get_state(f"{self.idx}.enabled"))
             self.ui.enableCbx.setText(ConceptModel.instance().get_concept_name(self.idx))
 
             img = ConceptModel.instance().get_preview_icon(self.idx)

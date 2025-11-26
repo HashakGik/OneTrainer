@@ -11,7 +11,7 @@ import torch
 
 class MaskModel(SingletonConfigModel):
     def __init__(self):
-        self.config = {
+        super().__init__({
             "model": GenerateMasksModel.CLIPSEG,
             "path": "",
             "prompt": "",
@@ -21,24 +21,25 @@ class MaskModel(SingletonConfigModel):
             "smooth": 5,
             "expand": 10,
             "include_subdirectories": False,
-        }
+        })
 
         self.masking_model = None
 
     def create_masks(self, progress_fn=None):
-        self.__load_masking_model(self.getState("model"))
+        with self.critical_region_read():
+            self.__load_masking_model(self.get_state("model"))
 
-        self.masking_model.mask_folder(
-            sample_dir=self.getState("path"),
-            prompts=[self.getState("prompt")],
-            mode=str(self.getState("mode")).lower(),
-            alpha=float(self.getState("alpha")),
-            threshold=float(self.getState("threshold")),
-            smooth_pixels=int(self.getState("smooth")),
-            expand_pixels=int(self.getState("expand")),
-            include_subdirectories=self.getState("include_subdirectories"),
-            progress_callback=self.__wrap_progress(progress_fn),
-        )
+            self.masking_model.mask_folder(
+                sample_dir=self.get_state("path"),
+                prompts=[self.get_state("prompt")],
+                mode=str(self.get_state("mode")).lower(),
+                alpha=float(self.get_state("alpha")),
+                threshold=float(self.get_state("threshold")),
+                smooth_pixels=int(self.get_state("smooth")),
+                expand_pixels=int(self.get_state("expand")),
+                include_subdirectories=self.get_state("include_subdirectories"),
+                progress_callback=self.__wrap_progress(progress_fn),
+            )
 
     def __wrap_progress(self, fn):
         def f(value, max_value):
@@ -49,17 +50,17 @@ class MaskModel(SingletonConfigModel):
     def __load_masking_model(self, model):
         if model == GenerateMasksModel.CLIPSEG:
             if self.masking_model is None or not isinstance(self.masking_model, ClipSegModel):
-                print("loading ClipSeg model, this may take a while")
+                self.log("info", "Loading ClipSeg model, this may take a while")
                 self.release_model()
                 self.masking_model = ClipSegModel(default_device, torch.float32)
         elif model == GenerateMasksModel.REMBG:
             if self.masking_model is None or not isinstance(self.masking_model, RembgModel):
-                print("loading Rembg model, this may take a while")
+                self.log("info", "Loading Rembg model, this may take a while")
                 self.release_model()
                 self.masking_model = RembgModel(default_device, torch.float32)
         elif model == GenerateMasksModel.REMBG_HUMAN:
             if self.masking_model is None or not isinstance(self.masking_model, RembgHumanModel):
-                print("loading Rembg-Human model, this may take a while")
+                self.log("info", "Loading Rembg-Human model, this may take a while")
                 self.release_model()
                 self.masking_model = RembgHumanModel(default_device, torch.float32)
         elif model == GenerateMasksModel.COLOR:

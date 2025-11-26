@@ -41,7 +41,7 @@ class AdditionalEmbeddingsController(BaseController):
             self.ui.listWidget.clear()
             self.children = []
 
-            for idx, _ in enumerate(StateModel.instance().getState("additional_embeddings")):
+            for idx, _ in enumerate(StateModel.instance().get_state("additional_embeddings")):
                 wdg = EmbeddingController(self.loader, idx, parent=self)
                 self.children.append(wdg)
                 self._appendWidget(self.ui.listWidget, wdg, self_delete_fn=self.__deleteEmbedding(idx), self_clone_fn=self.__cloneEmbedding(idx))

@@ -143,7 +143,7 @@ class OptimizerController(BaseController):
             optimizer = self.ui.optimizerCmb.currentData()
             if optimizer is not None:
                 for k, v in self.OPTIMIZER_DEFAULT_PARAMETERS[optimizer].items():
-                    StateModel.instance().setState(f"optimizer.{k}", v)
+                    StateModel.instance().set_state(f"optimizer.{k}", v)
 
                 QtW.QApplication.instance().stateChanged.emit()
                 QtW.QApplication.instance().optimizerChanged.emit(optimizer)
@@ -156,7 +156,7 @@ class OptimizerController(BaseController):
 
         callback = self.__updateOptimizer(from_index=False)
         self._connect(QtW.QApplication.instance().optimizerChanged, callback)
-        self._connect(QtW.QApplication.instance().stateChanged, lambda: callback(StateModel.instance().getState("optimizer.optimizer")))
+        self._connect(QtW.QApplication.instance().stateChanged, lambda: callback(StateModel.instance().get_state("optimizer.optimizer")))
 
     ###Reactions####
 
@@ -184,7 +184,7 @@ class OptimizerController(BaseController):
         # QGridLayout has no direct children, therefore, we must retrieve them in a different way.
         for k, v in self.optimizer_params.items():
             if k in self.OPTIMIZER_DEFAULT_PARAMETERS[optimizer]:
-                val = StateModel.instance().getState(f"optimizer.{k}")
+                val = StateModel.instance().get_state(f"optimizer.{k}")
             else:
                 val = None
             if v["type"] == "bool":

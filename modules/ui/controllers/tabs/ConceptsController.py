@@ -61,7 +61,7 @@ class ConceptsController(BaseController):
             for k, v in configs:
                 self.ui.presetCmb.addItem(k, userData=v)
 
-            self.ui.presetCmb.setCurrentIndex(self.ui.presetCmb.findData(StateModel.instance().getState("concept_file_name")))
+            self.ui.presetCmb.setCurrentIndex(self.ui.presetCmb.findData(StateModel.instance().get_state("concept_file_name")))
         return f
 
     def __loadConfig(self):

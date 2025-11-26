@@ -4,6 +4,8 @@ import threading
 import traceback
 import uuid
 
+from modules.ui.models.StateModel import StateModel
+
 from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal, Slot
 
 
@@ -40,7 +42,7 @@ class BaseWorker(QObject):
                 self.abort_flag.clear()
                 self.aborted.emit()
         except Exception:
-            traceback.print_exc()
+            StateModel.instance().log("critical", traceback.format_exc())
             exctype, value = sys.exc_info()[:2]
             self.errored.emit((exctype, value, traceback.format_exc()))
         else:

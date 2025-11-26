@@ -90,7 +90,7 @@ class ImageController(BaseController):
 
     def __processFiles(self):
         def f(progress_fn=None):
-            return ImageModel.instance().sample(progress_fn=progress_fn)
+            return ImageModel.instance().process_files(progress_fn=progress_fn)
         return f
 
     def __updateStatus(self):

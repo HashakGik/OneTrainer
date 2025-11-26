@@ -40,13 +40,13 @@ class DatasetConfig(BaseConfig):
 
 class DatasetModel(SingletonConfigModel):
     def __init__(self):
-        self.config = DatasetConfig.default_values()
+        super().__init__(DatasetConfig.default_values())
 
     def scan(self):
-        path = self.getState("path")
+        path, include_subdirs = self.bulk_read("path", "include_subdirectories")
+
         if path is not None:
             root = Path(path)
-            include_subdirs = self.getState("include_subdirectories")
 
             root_str = str(root.resolve())
             root_len = len(root_str) + 1  # ".../dir" + "/"
@@ -65,16 +65,14 @@ class DatasetModel(SingletonConfigModel):
                         if self.__is_supported(name):
                             # strip root and back-slashes only once
                             results.append(entry.path[root_len:].replace("\\", "/"))
-            self.setState("files", sorted(results, key=lambda x: self.natural_sort_key(x)))
+            self.set_state("files", sorted(results, key=lambda x: self.natural_sort_key(x)))
 
-    @SingletonConfigModel.atomic
     def getFilteredFiles(self):
-        path = self.config.path
-        unfiltered_files = self.config.files
-        file_filter = self.config.file_filter.strip()
-        file_filter_mode = self.config.file_filter_mode
-        caption_filter = self.config.caption_filter.strip()
-        caption_filter_mode = self.config.caption_filter_mode
+        (path, unfiltered_files, file_filter, file_filter_mode,
+         caption_filter, caption_filter_mode) = self.bulk_read("path", "files", "file_filter",
+                                                               "file_filter_mode", "caption_filter", "caption_filter_mode")
+        file_filter = file_filter.strip()
+        caption_filter = caption_filter.strip()
 
         if file_filter == "" and caption_filter == "":
             return unfiltered_files
@@ -136,7 +134,7 @@ class DatasetModel(SingletonConfigModel):
                         continue
                 filtered = [str(p) for p in caption_files]  # Convert back to list of strings if needed
             except Exception as e:
-                print(f"Error applying caption filter: {e}")
+                self.log("error", f"Error applying caption filter: {e}")
 
         return filtered
 
@@ -150,13 +148,12 @@ class DatasetModel(SingletonConfigModel):
 
         return [convert(c) for c in re.split(r"(\d+)", s)]
 
-    @SingletonConfigModel.atomic
     def getSample(self, path):
         image = None
         caption = None
         mask = None
 
-        basepath = self.getState("path")
+        basepath = self.get_state("path")
         image_path = Path(basepath) / path
         mask_path = image_path.with_name(f"{image_path.stem}-masklabel.png")
         caption_path = image_path.with_suffix(".txt")
@@ -174,7 +171,7 @@ class DatasetModel(SingletonConfigModel):
 
 
     def getMaskPath(self, path):
-        basepath = self.getState("path")
+        basepath = self.get_state("path")
         image_path = Path(basepath) / path
         mask_path = image_path.with_name(f"{image_path.stem}-masklabel.png")
 
@@ -182,20 +179,19 @@ class DatasetModel(SingletonConfigModel):
 
 
     def saveCaption(self, path, caption):
-        basepath = self.getState("path")
+        basepath = self.get_state("path")
         image_path = Path(basepath) / path
         caption_path = image_path.with_suffix(".txt")
         caption_path.write_text(caption.strip(), encoding="utf-8")
 
     def deleteCaption(self, path):
-        basepath = self.getState("path")
+        basepath = self.get_state("path")
         image_path = Path(basepath) / path
         caption_path = image_path.with_suffix(".txt")
         caption_path.unlink(missing_ok=True)
 
-    @SingletonConfigModel.atomic
     def deleteSample(self, path):
-        basepath = self.getState("path")
+        basepath = self.get_state("path")
         image_path = Path(basepath) / path
         mask_path = image_path.with_name(f"{image_path.stem}-masklabel.png")
         caption_path = image_path.with_suffix(".txt")
@@ -204,8 +200,9 @@ class DatasetModel(SingletonConfigModel):
         mask_path.unlink(missing_ok=True)
         caption_path.unlink(missing_ok=True)
 
-        if path in self.config.files:
-            self.config.files.remove(path)
+        with self.critical_region_write():
+            if path in self.config.files:
+                self.config.files.remove(path)
 
 
     def __is_supported(self, filename):

@@ -4,6 +4,7 @@ from modules.util.config.BaseConfig import BaseConfig
 import cv2
 import numpy as np
 
+# TODO: Sometimes it seems it won't save/load correctly from disk.
 
 class MaskHistoryConfig(BaseConfig):
     buffer: list
@@ -30,16 +31,16 @@ class MaskHistoryConfig(BaseConfig):
 
 class MaskHistoryModel(SingletonConfigModel):
     def __init__(self):
-        self.config = MaskHistoryConfig.default_values()
+        super().__init__(MaskHistoryConfig.default_values())
         self.draw = None
 
-    @SingletonConfigModel.atomic
     def loadMask(self, mask):
-        self.config.buffer = []
-        self.config.ptr = 0
-        self.config.original_mask = mask
-        self.config.current_mask = mask.copy()
-        self.config.width, self.config.height = mask.shape
+        with self.critical_region_write():
+            self.config.buffer = []
+            self.config.ptr = 0
+            self.config.original_mask = mask
+            self.config.current_mask = mask.copy()
+            self.config.width, self.config.height = mask.shape
 
     def __pack(self, mask):
         # Encodes np.bool into np.uint8 (flattened and zero-padded at the end).
@@ -50,49 +51,49 @@ class MaskHistoryModel(SingletonConfigModel):
         # Unpack np.uint8 into np.bool, remove zero-padding at the end, and reshape.
         return np.unpackbits(mask)[:w * h].reshape((w, h)).astype(np.uint8).copy()
 
-    @SingletonConfigModel.atomic
     def undo(self):
-        if self.config.ptr > 0:
-            self.config.ptr -= 1
-            self.config.current_mask = self.__unpack(self.config.buffer[self.config.ptr], self.config.width, self.config.height)
+        with self.critical_region_write():
+            if self.config.ptr > 0:
+                self.config.ptr -= 1
+                self.config.current_mask = self.__unpack(self.config.buffer[self.config.ptr], self.config.width, self.config.height)
 
-    @SingletonConfigModel.atomic
     def redo(self):
-        if self.config.ptr < len(self.config.buffer) - 1:
-            self.config.ptr += 1
-            self.config.current_mask = self.__unpack(self.config.buffer[self.config.ptr], self.config.width, self.config.height)
-
-
-    @SingletonConfigModel.atomic
-    def commit(self):
-        if self.config.current_mask is not None:
+        with self.critical_region_write():
             if self.config.ptr < len(self.config.buffer) - 1:
-                self.config.buffer = self.config.buffer[:self.config.ptr + 1] # Invalidate the future before adding a new state.
+                self.config.ptr += 1
+                self.config.current_mask = self.__unpack(self.config.buffer[self.config.ptr], self.config.width, self.config.height)
 
-            self.config.ptr = len(self.config.buffer)
-            packed, _, _ = self.__pack(self.config.current_mask)
-            self.config.buffer.append(packed)
+    def commit(self):
+        with self.critical_region_write():
+            if self.config.current_mask is not None:
+                if self.config.ptr < len(self.config.buffer) - 1:
+                    self.config.buffer = self.config.buffer[:self.config.ptr + 1] # Invalidate the future before adding a new state.
 
-    @SingletonConfigModel.atomic
+                self.config.ptr = len(self.config.buffer)
+                packed, _, _ = self.__pack(self.config.current_mask)
+                self.config.buffer.append(packed)
+
     def clearHistory(self):
+        with self.critical_region_write():
             self.config.buffer = []
             self.config.ptr = 0
             self.config.current_mask = self.config.original_mask.copy()
 
-
-    @SingletonConfigModel.atomic
     def reset(self):
-        self.commit() # Commit previous state.
-        self.config.current_mask = np.ones_like(self.config.current_mask)
-        self.commit() # Commit empty mask.
+        with self.critical_region_write():
+            self.commit() # Commit previous state.
+            self.config.current_mask = np.ones_like(self.config.current_mask)
+            self.commit() # Commit empty mask.
 
 
     def fill(self, x, y, color):
-        if self.config.current_mask is not None:
-            cv2.floodFill(self.config.current_mask, None, (x, y), color)
-            self.commit() # Always commit a fill.
+        with self.critical_region_write():
+            if self.config.current_mask is not None:
+                cv2.floodFill(self.config.current_mask, None, (x, y), color)
 
     def paintStroke(self, x0, y0, x1, y1, radius, color, commit=False):
+        # TODO: this should be protected from race conditions, however, locking every single stroke is noticeably slow.
+        # The solution may be to acquire the lock during mouse pressed and release it during commit, but can introduce bugs and violates encapsulation.
         if self.config.current_mask is not None:
             # Draw line between points
             line_width = 2 * radius + 1

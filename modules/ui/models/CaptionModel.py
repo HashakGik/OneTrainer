@@ -10,7 +10,7 @@ import torch
 
 class CaptionModel(SingletonConfigModel):
     def __init__(self):
-        self.config = {
+        super().__init__({
             "model": GenerateCaptionsModel.BLIP,
             "path": "",
             "caption": "",
@@ -18,39 +18,40 @@ class CaptionModel(SingletonConfigModel):
             "postfix": "",
             "mode": GenerateCaptionsAction.REPLACE,
             "include_subdirectories": False,
-        }
+        })
 
         self.captioning_model = None
 
     def create_captions(self, progress_fn=None):
-        self.__load_captioning_model(self.getState("model"))
+        with self.critical_region_read():
+            self.__load_captioning_model(self.get_state("model"))
 
-        self.captioning_model.caption_folder(
-            sample_dir=self.getState("path"),
-            initial_caption=self.getState("caption"),
-            caption_prefix=self.getState("prefix"),
-            caption_postfix=self.getState("postfix"),
-            mode=str(self.getState("mode")).lower(),
-            include_subdirectories=self.getState("include_subdirectories"),
-            progress_callback=self.__wrap_progress(progress_fn),
-        )
+            self.captioning_model.caption_folder(
+                sample_dir=self.get_state("path"),
+                initial_caption=self.get_state("caption"),
+                caption_prefix=self.get_state("prefix"),
+                caption_postfix=self.get_state("postfix"),
+                mode=str(self.get_state("mode")).lower(),
+                include_subdirectories=self.get_state("include_subdirectories"),
+                progress_callback=self.__wrap_progress(progress_fn),
+            )
 
     def __load_captioning_model(self, model):
         self.captioning_model = None
 
         if model == GenerateCaptionsModel.BLIP:
             if self.captioning_model is None or not isinstance(self.captioning_model, BlipModel):
-                print("loading Blip model, this may take a while")
+                self.log("info", "Loading Blip model, this may take a while")
                 self.release_model()
                 self.captioning_model = BlipModel(default_device, torch.float16)
         elif model == GenerateCaptionsModel.BLIP2:
             if self.captioning_model is None or not isinstance(self.captioning_model, Blip2Model):
-                print("loading Blip2 model, this may take a while")
+                self.log("info", "Loading Blip2 model, this may take a while")
                 self.release_model()
                 self.captioning_model = Blip2Model(default_device, torch.float16)
         elif model == GenerateCaptionsModel.WD14_VIT_2:
             if self.captioning_model is None or not isinstance(self.captioning_model, WDModel):
-                print("loading WD14_VIT_v2 model, this may take a while")
+                self.log("info", "Loading WD14_VIT_v2 model, this may take a while")
                 self.release_model()
                 self.captioning_model = WDModel(default_device, torch.float16)
 
