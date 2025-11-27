@@ -34,7 +34,7 @@ class ConceptController(BaseController):
         @Slot()
         def f():
             ConceptModel.instance().set_state(f"{self.idx}.enabled", self.ui.enableCbx.isChecked())
-            QtW.QApplication.instance().conceptsChanged.emit()
+            QtW.QApplication.instance().conceptsChanged.emit(True)
         return f
 
     def __updateConcept(self):

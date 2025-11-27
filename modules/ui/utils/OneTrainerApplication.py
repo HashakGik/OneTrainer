@@ -12,7 +12,7 @@ class OnetrainerApplication(QApplication):
     savedConfig = Signal(str)
 
     # Signals for dynamic widget lists and sub windows. The passed value is the currently selected element.
-    conceptsChanged = Signal()
+    conceptsChanged = Signal(bool) # If True, save changes.
     openConcept = Signal(int)
 
     samplesChanged = Signal()

@@ -270,7 +270,7 @@ class ConceptController(BaseController):
             ConceptModel.instance().set_state(f"{self.idx}.name", self.ui.nameLed.text())
 
             # No need to store statistics, as they are handled directly by the model.
-            QtW.QApplication.instance().conceptsChanged.emit()
+            QtW.QApplication.instance().conceptsChanged.emit(True)
             self.ui.hide()
         return f
 

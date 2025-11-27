@@ -99,9 +99,8 @@ class ConceptModel(SingletonConfigModel):
                 c.enabled = not some_enabled
 
     def get_filtered_concepts(self, query="", type=ConceptType.ALL, show_disabled=True):
-
         with self.critical_region_read():
-            filtered_concepts = [c for c in self.config
+            filtered_concepts = [(idx, c) for idx, c in enumerate(self.config)
                                  if (show_disabled or c.enabled) and
                                  (type == ConceptType.ALL or c.type == type) and
                                  (query == "" or query.strip() in c.name)]
@@ -284,7 +283,7 @@ class ConceptModel(SingletonConfigModel):
         formatted_stats["mask_count_unpaired"] = concept_stats["unpaired_masks"]
 
         # Caption count.
-        if concept_stats["subcaption_count"] > 0:
+        if "subcaption_count" in concept_stats and concept_stats["subcaption_count"] > 0:
             formatted_stats["caption_count"] = f'{concept_stats["caption_count"]} ({concept_stats["subcaption_count"]})'
         else:
             formatted_stats["caption_count"] = concept_stats["caption_count"]
