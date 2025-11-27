@@ -106,9 +106,11 @@ class ConceptController(BaseController):
         self._connect(self.ui.refreshAdvancedBtn.clicked, self.__startScan(advanced_scanning=True))
         self._connect(self.ui.abortScanBtn.clicked, self.__abortScan())
         self._connect(self.ui.downloadNowBtn.clicked, self.__startDownload())
-        self._connect(self.ui.updatePreviewBtn.clicked, self.__updateImage())
         self._connect(self.ui.prevBtn.clicked, self.__prevImage())
         self._connect(self.ui.nextBtn.clicked, self.__nextImage())
+
+        self._connect([self.ui.prevBtn.clicked, self.ui.nextBtn.clicked, self.ui.updatePreviewBtn.clicked],
+                      self.__updateImage())
 
         self.__enableDownloadBtn(True)()
         self.__enableScanBtn(True)()
@@ -232,7 +234,6 @@ class ConceptController(BaseController):
                 self.file_index = (self.file_index + image_count - 1) % image_count
             else:
                 self.file_index = max(0, self.file_index - 1)
-            self.__updateImage()
         return f
 
     def __nextImage(self):
@@ -243,7 +244,6 @@ class ConceptController(BaseController):
                 self.file_index = (self.file_index + 1) % image_count
             else:
                 self.file_index += 1
-            self.__updateImage()
         return f
 
     def __updateImage(self):
