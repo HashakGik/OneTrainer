@@ -326,9 +326,9 @@ class DatasetController(BaseController):
         def f():
             choice, new_mask, mask_path = self.__checkMaskChanged()
             if choice == QtW.QMessageBox.StandardButton.Yes:
-                new_mask_img = Image.fromarray(new_mask, "L")
-                MaskHistoryModel.instance().load_mask(new_mask)
+                new_mask_img = Image.fromarray(new_mask * 255, "L")
                 new_mask_img.convert("RGB").save(mask_path)
+                MaskHistoryModel.instance().load_mask(new_mask)
 
         return f
 
@@ -399,7 +399,7 @@ class DatasetController(BaseController):
                                     self.ui.captionTed.setPlainText(caption)
 
                                 if mask is None:
-                                    mask = Image.new("L", self.image.size, 1)
+                                    mask = Image.new("L", self.image.size, 255)
 
                                 MaskHistoryModel.instance().load_mask(np.asarray(mask))
                                 self.im = self.ax.imshow(self.image)
@@ -494,7 +494,7 @@ class DatasetController(BaseController):
                 choice, new_mask, mask_path = self.__checkMaskChanged(cancel=True)
                 if choice != QtW.QMessageBox.StandardButton.Cancel:
                     if choice == QtW.QMessageBox.StandardButton.Yes:
-                        Image.fromarray(new_mask, "L").convert("RGB").save(mask_path)
+                        Image.fromarray(new_mask * 255, "L").convert("RGB").save(mask_path)
 
             return choice != QtW.QMessageBox.StandardButton.Cancel
         else:
@@ -560,7 +560,6 @@ class DatasetController(BaseController):
                                     QCA.translate("dataset_window", "Mask has changed. Do you want to save it?"),
                                     type="question",
                                     buttons=buttons)
-
         return choice, new_mask, mask_path
 
     def __checkCaptionChanged(self, cancel=False):
