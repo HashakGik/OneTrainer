@@ -3,6 +3,7 @@ from modules.ui.models.StateModel import StateModel
 from modules.util.enum.GradientReducePrecision import GradientReducePrecision
 from modules.util.enum.TimeUnit import TimeUnit
 
+import PySide6.QtGui as QtGui
 from PySide6.QtCore import QCoreApplication as QCA
 from PySide6.QtCore import Slot
 
@@ -59,6 +60,14 @@ class GeneralController(BaseController):
 
         for e in TimeUnit.enabled_values():
             self.ui.validateCmb.addItem(e.pretty_print(), userData=e)
+
+    def _connectInputValidation(self):
+        self.ui.deviceIndexesLed.setValidator(QtGui.QRegularExpressionValidator(r"(\d+(,\d+)*)?", self.ui))
+
+        # TODO: trainDeviceLed and tempDeviceLed may be restricted to a comma-separated list of available torch devices.
+        # However it is not possible to get a list of all possible devices without some hackish error handling, according to https://github.com/pytorch/pytorch/issues/97026
+        # torch.testing.get_all_device_types() returns the *current* machine's devices, which may be unsuitable for cloud training.
+
 
     ###Reactions###
 

@@ -1,3 +1,5 @@
+import os
+
 from modules.ui.controllers.BaseController import BaseController
 from modules.ui.models.ConvertModel import ConvertModel
 from modules.ui.utils.WorkerPool import WorkerPool
@@ -19,7 +21,7 @@ class ConvertController(BaseController):
     def _connectUIBehavior(self):
         self._connectFileDialog(self.ui.inputBtn, self.ui.inputLed, is_dir=False, save=False,
                                title=QCA.translate("dialog_window", "Open Input model"),
-                               filters=QCA.translate("filetype_filters", "Safetensors (*.safetensors);;Diffusers (model_index.json);;Checkpoints (*.ckpt, *.pt, *.bin);;All Files (*.*)"))
+                               filters=QCA.translate("filetype_filters", "Safetensors (*.safetensors);;Diffusers (model_index.json);;Checkpoints (*.ckpt *.pt *.bin);;All Files (*.*)"))
         self._connectFileDialog(self.ui.outputBtn, self.ui.outputLed, is_dir=False, save=True,
                                title=QCA.translate("dialog_window", "Save Output model"),
                                filters=QCA.translate("filetype_filters", "Safetensors (*.safetensors);;Diffusers (model_index.json)"))
@@ -56,11 +58,19 @@ class ConvertController(BaseController):
     def __startConvert(self):
         @Slot()
         def f():
-            worker, name = WorkerPool.instance().createNamed(self.__convert(), "convert_model")
-            if worker is not None:
-                worker.connectCallbacks(init_fn=self.__enableButton(False), result_fn=None, finished_fn=self.__enableButton(True),
-                               errored_fn=self.__enableButton(True), aborted_fn=self.__enableButton(True))
-                WorkerPool.instance().start(name)
+            if self.ui.outputLed.text() != "" and self.ui.inputLed.text() != "":
+                if os.path.exists(self.ui.inputLed.text()):
+                    worker, name = WorkerPool.instance().createNamed(self.__convert(), "convert_model")
+                    if worker is not None:
+                        worker.connectCallbacks(init_fn=self.__enableButton(False), result_fn=None, finished_fn=self.__enableButton(True),
+                                       errored_fn=self.__enableButton(True), aborted_fn=self.__enableButton(True))
+                        WorkerPool.instance().start(name)
+                else:
+                    self._openAlert(QCA.translate("convert_window", "Cannot Open Input Model"),
+                                    QCA.translate("convert_window", "The selected input model does not exist"), type="critical")
+            else:
+                self._openAlert(QCA.translate("convert_window", "No Model Selected"),
+                                QCA.translate("convert_window", "Please select input and output model files"))
         return f
 
     def __enableButton(self, enabled):

@@ -19,11 +19,11 @@ class SampleParamsController(BaseController):
     def _connectUIBehavior(self):
         self._connectFileDialog(self.ui.imagePathBtn, self.ui.imagePathLed, is_dir=False, save=False,
                             title=QCA.translate("dialog_window", "Open Base Image"),
-                               filters=QCA.translate("filetype_filters", "Image (*.jpg, *.jpeg, *.tif, *.png, *.webp)"))
+                               filters=QCA.translate("filetype_filters", "Image (*.jpg *.jpeg *.tif *.png *.webp)"))
         self._connectFileDialog(self.ui.maskPathBtn, self.ui.maskPathLed, is_dir=False, save=False,
                                title=QCA.translate("dialog_window", "Open Mask Image"),
                                filters=QCA.translate("filetype_filters",
-                                                     "Image (*.jpg, *.jpeg, *.tif, *.png, *.webp)"))
+                                                     "Image (*.jpg *.jpeg *.tif *.png *.webp)"))
 
         self.dynamic_state_ui_connections = {
             "prompt": "promptLed",

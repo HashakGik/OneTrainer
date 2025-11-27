@@ -5,6 +5,7 @@ from modules.ui.models.ConceptModel import ConceptModel
 from modules.ui.models.StateModel import StateModel
 from modules.util.enum.ConceptType import ConceptType
 
+import PySide6.QtGui as QtGui
 import PySide6.QtWidgets as QtW
 from PySide6.QtCore import QCoreApplication as QCA
 from PySide6.QtCore import Slot
@@ -44,6 +45,9 @@ class ConceptsController(BaseController):
     def _loadPresets(self):
         for e in ConceptType.enabled_values(context="all"):
             self.ui.typeCmb.addItem(e.pretty_print(), userData=e)
+
+    def _connectInputValidation(self):
+        self.ui.presetCmb.setValidator(QtGui.QRegularExpressionValidator(r"[a-zA-Z0-9_\-.][a-zA-Z0-9_\-. ]*", self.ui))
 
     ###Reactions###
 

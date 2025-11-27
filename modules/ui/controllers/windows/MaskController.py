@@ -1,3 +1,5 @@
+import os
+
 from modules.ui.controllers.BaseController import BaseController
 from modules.ui.models.MaskModel import MaskModel
 from modules.ui.utils.WorkerPool import WorkerPool
@@ -47,13 +49,22 @@ class MaskController(BaseController):
     def __startMask(self):
         @Slot()
         def f():
-            worker, name = WorkerPool.instance().createNamed(self.__createMask(), "create_mask", inject_progress_callback=True)
-            if worker is not None:
-                worker.connectCallbacks(init_fn=self.__enableControls(False), result_fn=None,
-                               finished_fn=self.__enableControls(True),
-                               errored_fn=self.__enableControls(True), aborted_fn=self.__enableControls(True),
-                               progress_fn=self._updateProgress(self.ui.progressBar))
-                WorkerPool.instance().start(name)
+            if self.ui.folderLed.text() != "":
+                if os.path.isdir(self.ui.folderLed.text()):
+                    worker, name = WorkerPool.instance().createNamed(self.__createMask(), "create_mask", inject_progress_callback=True)
+                    if worker is not None:
+                        worker.connectCallbacks(init_fn=self.__enableControls(False), result_fn=None,
+                                       finished_fn=self.__enableControls(True),
+                                       errored_fn=self.__enableControls(True), aborted_fn=self.__enableControls(True),
+                                       progress_fn=self._updateProgress(self.ui.progressBar))
+                        WorkerPool.instance().start(name)
+                else:
+                    self._openAlert(QCA.translate("mask_window", "Invalid Folder"),
+                                    QCA.translate("mask_window", "The selected input folder does not exist"),
+                                    type="critical")
+            else:
+                self._openAlert(QCA.translate("mask_window", "No Folder Selected"),
+                                QCA.translate("mask_window", "Please select an input folder"))
 
         return f
 

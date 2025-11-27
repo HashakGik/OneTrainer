@@ -9,6 +9,7 @@ from modules.ui.utils.WorkerPool import WorkerPool
 from modules.util.enum.ImageFormat import ImageFormat
 from modules.util.enum.TimeUnit import TimeUnit
 
+import PySide6.QtGui as QtGui
 import PySide6.QtWidgets as QtW
 from PySide6.QtCore import QCoreApplication as QCA
 from PySide6.QtCore import Slot
@@ -32,13 +33,11 @@ class SamplingController(BaseController):
     def _setup(self):
         self.children = []
         self.sample_params_window = NewSampleController(self.loader, parent=self)
-        self.manual_sample_window = SampleControllerWindow(self.loader, parent=None) # TODO: pass train commands?
+        self.manual_sample_window = SampleControllerWindow(self.loader, parent=None)
 
     def _connectUIBehavior(self):
         self._connect(self.ui.addSampleBtn.clicked, self.__appendSample())
         self._connect(self.ui.toggleBtn.clicked, self.__toggleSamples())
-
-        # TODO: manualSampleBtn -> if training is running Opens Sampling tool and injects training commands (ie. lets the currently training model produce an arbitrary sample)
 
         self._connect(self.ui.manualSampleBtn.clicked, self.__openSampleWindow())
 
@@ -58,6 +57,9 @@ class SamplingController(BaseController):
         self._connect(QtW.QApplication.instance().samplesChanged, cb4)
 
         self._connect(self.ui.sampleNowBtn.clicked, self.__startSample())
+
+    def _connectInputValidation(self):
+        self.ui.configCmb.setValidator(QtGui.QRegularExpressionValidator(r"[a-zA-Z0-9_\-.][a-zA-Z0-9_\-. ]*", self.ui))
 
 
     def _loadPresets(self):

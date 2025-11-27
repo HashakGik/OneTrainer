@@ -31,7 +31,7 @@ class LoraController(BaseController):
     def _connectUIBehavior(self):
         self._connectFileDialog(self.ui.baseModelBtn, self.ui.baseModelLed, is_dir=False, save=False,
                                title=QCA.translate("dialog_window", "Open LoRA/LoHA/OFT 2 base model"),
-                               filters=QCA.translate("filetype_filters", "Safetensors (*.safetensors);;Diffusers (model_index.json);;Checkpoints (*.ckpt, *.pt, *.bin);;All Files (*.*)"))
+                               filters=QCA.translate("filetype_filters", "Safetensors (*.safetensors);;Diffusers (model_index.json);;Checkpoints (*.ckpt *.pt *.bin);;All Files (*.*)"))
 
         self._connect(self.ui.typeCmb.activated, self.__updateType(), update_after_connect=True)
         self._connect(self.ui.decomposeCbx.toggled, self.__updateDora(), update_after_connect=True, initial_args=[self.ui.decomposeCbx.isChecked()])

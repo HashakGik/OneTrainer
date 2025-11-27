@@ -4,6 +4,7 @@ import os
 import pathlib
 import random
 import shlex
+import shutil
 import subprocess
 
 from modules.ui.models.SingletonConfigModel import SingletonConfigModel
@@ -18,8 +19,8 @@ class VideoModel(SingletonConfigModel):
         super().__init__({
             "clips": {
                 "single_video": "",
-                "range_start": "",
-                "range_end": "",
+                "range_start": "00:00:00",
+                "range_end": "99:99:99",
                 "directory": "",
                 "output": "",
                 "output_to_subdirectories": False,
@@ -31,8 +32,8 @@ class VideoModel(SingletonConfigModel):
             },
             "images": {
                 "single_video": "",
-                "range_start": "",
-                "range_end": "",
+                "range_start": "00:00:00",
+                "range_end": "99:99:99",
                 "directory": "",
                 "output": "",
                 "output_to_subdirectories": False,
@@ -45,7 +46,7 @@ class VideoModel(SingletonConfigModel):
                 "single_link": "",
                 "link_list": "",
                 "output": "",
-                "additional_args": ""
+                "additional_args": "--quiet --no-warnings --progress"
             }
         })
 
@@ -64,7 +65,7 @@ class VideoModel(SingletonConfigModel):
                 if ok:
                     return [path]
                 else:
-                    print("Invalid video file!")
+                    self.log("error", "Invalid video file!")
                     return []
             else:
                 self.log("error", "No file specified, or invalid file path!")
@@ -145,9 +146,11 @@ class VideoModel(SingletonConfigModel):
                              as_dict=True)
 
 
-        if not pathlib.Path(cfg["clips.output"]).is_dir() or cfg["clips.output"] == "":
-            self.log("error", "Invalid output directory!")
-            return
+        # if not pathlib.Path(cfg["clips.output"]).is_dir() or cfg["clips.output"] == "":
+        #     self.log("error", "Invalid output directory!")
+        #     return
+        pathlib.Path(cfg["clips.output"]).mkdir(parents=True, exist_ok=True)
+
 
         # validate numeric inputs
         try:
@@ -157,15 +160,15 @@ class VideoModel(SingletonConfigModel):
         except ValueError:
             self.log("error", "Invalid numeric input for Max Length, Crop Variation, or FPS.")
             return
-        if max_length <= 0.25:
-            self.log("error", "Max Length of clips must be > 0.25 seconds.")
-            return
-        if target_fps < 0:
-            self.log("error", "Target FPS must be a positive integer (or 0 to skip fps re-encoding).")
-            return
-        if not (0.0 <= crop_variation < 1.0):
-            self.log("error", "Crop Variation must be between 0.0 and 1.0.")
-            return
+        # if max_length <= 0.25:
+        #     self.log("error", "Max Length of clips must be > 0.25 seconds.")
+        #     return
+        # if target_fps < 0:
+        #     self.log("error", "Target FPS must be a positive integer (or 0 to skip fps re-encoding).")
+        #     return
+        # if not (0.0 <= crop_variation < 1.0):
+        #     self.log("error", "Crop Variation must be between 0.0 and 1.0.")
+        #     return
 
         input_videos = self.__get_vid_paths(batch_mode, cfg["clips.single_video"], cfg["clips.directory"])
         if len(input_videos) == 0:  # exit if no paths found
@@ -321,14 +324,15 @@ class VideoModel(SingletonConfigModel):
     def extract_images_multi(self, batch_mode : bool):
         cfg = self.bulk_read("images.output", "images.capture_rate", "images.blur_removal",
                              "images.crop_variation", "images.single_video", "images.directory",
-                             "images.output_to_subdirectories", "image_list_entry", "images.remove_borders",
+                             "images.output_to_subdirectories", "images.directory", "images.remove_borders",
                              "images.range_start", "images.range_end",
                              as_dict=True)
 
 
-        if not pathlib.Path(cfg["images.output"]).is_dir() or cfg["images.output"] == "":
-            print("Invalid output directory!")
-            return
+        # if not pathlib.Path(cfg["images.output"]).is_dir() or cfg["images.output"] == "":
+        #     self.log("error", "Invalid output directory!")
+        #     return
+        pathlib.Path(cfg["images.output"]).mkdir(parents=True, exist_ok=True)
 
         # validate numeric inputs
         try:
@@ -338,15 +342,15 @@ class VideoModel(SingletonConfigModel):
         except ValueError:
             self.log("error", "Invalid numeric input for Images/sec, Blur Removal, or Crop Variation.")
             return
-        if capture_rate <= 0:
-            self.log("error", "Images/sec must be > 0.")
-            return
-        if not (0.0 <= blur_threshold < 1.0):
-            self.log("error", "Blur Removal must be between 0.0 and 1.0.")
-            return
-        if not (0.0 <= crop_variation < 1.0):
-            self.log("error", "Crop Variation must be between 0.0 and 1.0.")
-            return
+        # if capture_rate <= 0:
+        #     self.log("error", "Images/sec must be > 0.")
+        #     return
+        # if not (0.0 <= blur_threshold < 1.0):
+        #     self.log("error", "Blur Removal must be between 0.0 and 1.0.")
+        #     return
+        # if not (0.0 <= crop_variation < 1.0):
+        #     self.log("error", "Crop Variation must be between 0.0 and 1.0.")
+        #     return
 
         input_videos = self.__get_vid_paths(batch_mode, cfg["images.single_video"], cfg["images.directory"])
         if len(input_videos) == 0:  #exit if no paths found
@@ -356,7 +360,7 @@ class VideoModel(SingletonConfigModel):
             for video_path in input_videos:
                 if cfg["images.output_to_subdirectories"] and batch_mode:
                     output_directory = os.path.join(cfg["images.output"],
-                                                    os.path.splitext(os.path.relpath(video_path, cfg["image_list_entry"]))[0])
+                                                    os.path.splitext(os.path.relpath(video_path, cfg["images.directory"]))[0])
                 elif cfg["images.output_to_subdirectories"] and not batch_mode:
                     output_directory = os.path.join(cfg["images.output"],
                                                     os.path.splitext(os.path.basename(video_path))[0])
@@ -454,9 +458,10 @@ class VideoModel(SingletonConfigModel):
                              "download.link_list", "download.additional_args",
                              as_dict=True)
 
-        if not pathlib.Path(cfg["download.output"]).is_dir() or cfg["download.output"] == "":
-            self.log("error", "Invalid output directory!")
-            return
+        # if not pathlib.Path(cfg["download.output"]).is_dir() or cfg["download.output"] == "":
+        #     self.log("error", "Invalid output directory!")
+        #     return
+        pathlib.Path(cfg["download.output"]).mkdir(parents=True, exist_ok=True)
 
         if not batch_mode:
             ydl_urls = [cfg["download.single_link"]]
@@ -483,8 +488,16 @@ class VideoModel(SingletonConfigModel):
             return
 
         additional_args = shlex.split(output_args.strip()) if output_args and output_args.strip() else [] # Respect quotes and split into list
-        cmd = ["yt-dlp", "-o", "%(title)s.%(ext)s", "-P", output_dir] + additional_args + [url]
 
-        self.log("info", f'Downloading {url}...')
-        subprocess.run(cmd)
-        self.log("info", f'Download {url} done!')
+        yt_dlp = shutil.which("yt-dlp")
+        if yt_dlp is not None:
+            cmd = [yt_dlp, "-o", "%(title)s.%(ext)s", "-P", output_dir] + additional_args + [url]
+
+            self.log("info", f'Downloading {url}...')
+            exitcode = subprocess.run(cmd).returncode
+            if exitcode == 0:
+                self.log("info", f'Download {url} done!')
+            else:
+                self.log("error", f'Failed to download {url} (process terminated with exit code {exitcode})')
+        else:
+            self.log("critical", 'yt-dlp executable not found in $PATH')

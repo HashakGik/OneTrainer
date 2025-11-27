@@ -1,3 +1,5 @@
+import os
+
 from modules.ui.controllers.BaseController import BaseController
 from modules.ui.models.CaptionModel import CaptionModel
 from modules.ui.utils.WorkerPool import WorkerPool
@@ -44,13 +46,21 @@ class CaptionController(BaseController):
     def __startCaption(self):
         @Slot()
         def f():
-            worker, name = WorkerPool.instance().createNamed(self.__createCaption(), "create_caption", inject_progress_callback=True)
-            if worker is not None:
-                worker.connectCallbacks(init_fn=self.__enableControls(False), result_fn=None,
-                               finished_fn=self.__enableControls(True),
-                               errored_fn=self.__enableControls(True), aborted_fn=self.__enableControls(True),
-                               progress_fn=self._updateProgress(self.ui.progressBar))
-                WorkerPool.instance().start(name)
+            if self.ui.folderLed.text() != "":
+                if os.path.isdir(self.ui.folderLed.text()):
+                    worker, name = WorkerPool.instance().createNamed(self.__createCaption(), "create_caption", inject_progress_callback=True)
+                    if worker is not None:
+                        worker.connectCallbacks(init_fn=self.__enableControls(False), result_fn=None,
+                                       finished_fn=self.__enableControls(True),
+                                       errored_fn=self.__enableControls(True), aborted_fn=self.__enableControls(True),
+                                       progress_fn=self._updateProgress(self.ui.progressBar))
+                        WorkerPool.instance().start(name)
+                else:
+                    self._openAlert(QCA.translate("caption_window", "Invalid Folder"),
+                                    QCA.translate("caption_window", "The selected input folder does not exist"), type="critical")
+            else:
+                self._openAlert(QCA.translate("caption_window", "No Folder Selected"),
+                                QCA.translate("caption_window", "Please select an input folder"))
 
         return f
 

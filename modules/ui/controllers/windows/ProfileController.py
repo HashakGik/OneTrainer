@@ -33,4 +33,7 @@ class ProfileController(BaseController):
             else:
                 self.ui.statusLbl.setText(QCA.translate("profiling_window", "Inactive"))
                 self.ui.startBtn.setText(QCA.translate("profiling_window", "Start Profiling"))
+
+            # TODO: this button exits the application if not run from Scalene. It would be nice to disable it when running from python.
+            #  However the library does not expose a function to check before running scalene_profiler.start()
         return f

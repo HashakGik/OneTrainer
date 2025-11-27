@@ -1,3 +1,5 @@
+import os
+
 from modules.ui.controllers.BaseController import BaseController
 from modules.ui.models.VideoModel import VideoModel
 from modules.ui.utils.WorkerPool import WorkerPool
@@ -20,11 +22,11 @@ class VideoController(BaseController):
         self._connectFileDialog(self.ui.singleVideo1Btn, self.ui.singleVideo1Led, is_dir=False, save=False,
                                title=QCA.translate("dialog_window", "Open Video"),
                                filters=QCA.translate("filetype_filters",
-                                                     "Video (*.m4v, *.wmv, *.mp4, *.avi, *.webm)"))
+                                                     "Video (*.m4v *.wmv *.mp4 *.avi *.webm)"))
         self._connectFileDialog(self.ui.singleVideo2Btn, self.ui.singleVideo2Led, is_dir=False, save=False,
                                title=QCA.translate("dialog_window", "Open Video"),
                                filters=QCA.translate("filetype_filters",
-                                                     "Video (*.m4v, *.wmv, *.mp4, *.avi, *.webm)"))
+                                                     "Video (*.m4v *.wmv *.mp4 *.avi *.webm)"))
 
         self._connectFileDialog(self.ui.directory1Btn, self.ui.directory1Led, is_dir=True, save=False,
                                title=QCA.translate("dialog_window", "Open Video directory"))
@@ -98,61 +100,134 @@ class VideoController(BaseController):
     def __startClipSingle(self):
         @Slot()
         def f():
-            worker, name = WorkerPool.instance().createNamed(self.__extractClip(), "video_processing", batch_mode=False)
-            if worker is not None:
-                worker.connectCallbacks(init_fn=self.__enableButtons(False), result_fn=None, finished_fn=self.__enableButtons(True),
-                               errored_fn=self.__enableButtons(True), aborted_fn=self.__enableButtons(True))
-                WorkerPool.instance().start(name)
+            if self.ui.singleVideo1Led.text() != "":
+                if os.path.exists(self.ui.singleVideo1Led.text()):
+                    if self.ui.output1Led.text() != "":
+                        worker, name = WorkerPool.instance().createNamed(self.__extractClip(), "video_processing", batch_mode=False)
+                        if worker is not None:
+                            worker.connectCallbacks(init_fn=self.__enableButtons(False), result_fn=None, finished_fn=self.__enableButtons(True),
+                                           errored_fn=self.__enableButtons(True), aborted_fn=self.__enableButtons(True))
+                            WorkerPool.instance().start(name)
+                    else:
+                        self._openAlert(QCA.translate("video_window", "No Folder Selected"),
+                                        QCA.translate("video_window", "Please select an output folder"))
+                else:
+                    self._openAlert(QCA.translate("video_window", "Invalid File"),
+                                    QCA.translate("video_window", "The selected input file does not exist"),
+                                    type="critical")
+            else:
+                self._openAlert(QCA.translate("video_window", "No File Selected"),
+                                QCA.translate("video_window", "Please select an input file"))
         return f
 
     def __startClipDirectory(self):
         @Slot()
         def f():
-            worker, name = WorkerPool.instance().createNamed(self.__extractClip(), "video_processing", batch_mode=True)
-            if worker is not None:
-                worker.connectCallbacks(init_fn=self.__enableButtons(False), result_fn=None, finished_fn=self.__enableButtons(True),
-                               errored_fn=self.__enableButtons(True), aborted_fn=self.__enableButtons(True))
-                WorkerPool.instance().start(name)
+            if self.ui.directory1Led.text() != "":
+                if os.path.isdir(self.ui.directory1Led.text()):
+                    if self.ui.output1Led.text() != "":
+                        worker, name = WorkerPool.instance().createNamed(self.__extractClip(), "video_processing", batch_mode=True)
+                        if worker is not None:
+                            worker.connectCallbacks(init_fn=self.__enableButtons(False), result_fn=None, finished_fn=self.__enableButtons(True),
+                                           errored_fn=self.__enableButtons(True), aborted_fn=self.__enableButtons(True))
+                            WorkerPool.instance().start(name)
+                    else:
+                        self._openAlert(QCA.translate("video_window", "No Folder Selected"),
+                                        QCA.translate("video_window", "Please select an output folder"))
+                else:
+                    self._openAlert(QCA.translate("video_window", "Invalid Folder"),
+                                    QCA.translate("video_window", "The selected input folder does not exist"),
+                                    type="critical")
+            else:
+                self._openAlert(QCA.translate("video_window", "No Folder Selected"),
+                                QCA.translate("video_window", "Please select an input folder"))
         return f
 
     def __startImageSingle(self):
         @Slot()
         def f():
-            worker, name = WorkerPool.instance().createNamed(self.__extractImage(), "video_processing", batch_mode=False)
-            if worker is not None:
-                worker.connectCallbacks(init_fn=self.__enableButtons(False), result_fn=None, finished_fn=self.__enableButtons(True),
-                               errored_fn=self.__enableButtons(True), aborted_fn=self.__enableButtons(True))
-                WorkerPool.instance().start(name)
+            if self.ui.singleVideo2Led.text() != "":
+                if os.path.exists(self.ui.singleVideo2Led.text()):
+                    if self.ui.output2Led.text() != "":
+                        worker, name = WorkerPool.instance().createNamed(self.__extractImage(), "video_processing", batch_mode=False)
+                        if worker is not None:
+                            worker.connectCallbacks(init_fn=self.__enableButtons(False), result_fn=None, finished_fn=self.__enableButtons(True),
+                                           errored_fn=self.__enableButtons(True), aborted_fn=self.__enableButtons(True))
+                            WorkerPool.instance().start(name)
+                    else:
+                        self._openAlert(QCA.translate("video_window", "No Folder Selected"),
+                                        QCA.translate("video_window", "Please select an output folder"))
+                else:
+                    self._openAlert(QCA.translate("video_window", "Invalid File"),
+                                    QCA.translate("video_window", "The selected input file does not exist"),
+                                    type="critical")
+            else:
+                self._openAlert(QCA.translate("video_window", "No File Selected"),
+                                QCA.translate("video_window", "Please select an input file"))
         return f
 
     def __startImageDirectory(self):
         @Slot()
         def f():
-            worker, name = WorkerPool.instance().createNamed(self.__extractImage(), "video_processing", batch_mode=True)
-            if worker is not None:
-                worker.connectCallbacks(init_fn=self.__enableButtons(False), result_fn=None, finished_fn=self.__enableButtons(True),
-                               errored_fn=self.__enableButtons(True), aborted_fn=self.__enableButtons(True))
-                WorkerPool.instance().start(name)
+            if self.ui.directory2Led.text() != "":
+                if os.path.isdir(self.ui.directory2Led.text()):
+                    if self.ui.output2Led.text() != "":
+                        worker, name = WorkerPool.instance().createNamed(self.__extractImage(), "video_processing", batch_mode=True)
+                        if worker is not None:
+                            worker.connectCallbacks(init_fn=self.__enableButtons(False), result_fn=None, finished_fn=self.__enableButtons(True),
+                                           errored_fn=self.__enableButtons(True), aborted_fn=self.__enableButtons(True))
+                            WorkerPool.instance().start(name)
+                    else:
+                        self._openAlert(QCA.translate("video_window", "No Folder Selected"),
+                                        QCA.translate("video_window", "Please select an output folder"))
+                else:
+                    self._openAlert(QCA.translate("video_window", "Invalid Folder"),
+                                    QCA.translate("video_window", "The selected input folder does not exist"),
+                                    type="critical")
+            else:
+                self._openAlert(QCA.translate("video_window", "No Folder Selected"),
+                                QCA.translate("video_window", "Please select an input folder"))
         return f
 
     def __startDownloadLink(self):
         @Slot()
         def f():
-            worker, name = WorkerPool.instance().createNamed(self.__download(), "video_processing", batch_mode=False)
-            if worker is not None:
-                worker.connectCallbacks(init_fn=self.__enableButtons(False), result_fn=None, finished_fn=self.__enableButtons(True),
-                               errored_fn=self.__enableButtons(True), aborted_fn=self.__enableButtons(True))
-                WorkerPool.instance().start(name)
+            if self.ui.singleLinkLed.text() != "":
+                if self.ui.output3Led.text() != "":
+                    worker, name = WorkerPool.instance().createNamed(self.__download(), "video_processing", batch_mode=False)
+                    if worker is not None:
+                        worker.connectCallbacks(init_fn=self.__enableButtons(False), result_fn=None, finished_fn=self.__enableButtons(True),
+                                       errored_fn=self.__enableButtons(True), aborted_fn=self.__enableButtons(True))
+                        WorkerPool.instance().start(name)
+                else:
+                    self._openAlert(QCA.translate("video_window", "No Folder Selected"),
+                                    QCA.translate("video_window", "Please select an output folder"))
+            else:
+                self._openAlert(QCA.translate("video_window", "No URL Provided"),
+                                QCA.translate("video_window", "Please insert a valid URL"))
         return f
 
     def __startDownloadList(self):
         @Slot()
         def f():
-            worker, name = WorkerPool.instance().createNamed(self.__download(), "video_processing", batch_mode=True)
-            if worker is not None:
-                worker.connectCallbacks(init_fn=self.__enableButtons(False), result_fn=None, finished_fn=self.__enableButtons(True),
-                               errored_fn=self.__enableButtons(True), aborted_fn=self.__enableButtons(True))
-                WorkerPool.instance().start(name)
+            if self.ui.linkListLed.text() != "":
+                if os.path.exists(self.ui.linkListLed.text()):
+                    if self.ui.output3Led.text() != "":
+                        worker, name = WorkerPool.instance().createNamed(self.__download(), "video_processing", batch_mode=True)
+                        if worker is not None:
+                            worker.connectCallbacks(init_fn=self.__enableButtons(False), result_fn=None, finished_fn=self.__enableButtons(True),
+                                           errored_fn=self.__enableButtons(True), aborted_fn=self.__enableButtons(True))
+                            WorkerPool.instance().start(name)
+                    else:
+                        self._openAlert(QCA.translate("video_window", "No Folder Selected"),
+                                        QCA.translate("video_window", "Please select an output folder"))
+                else:
+                    self._openAlert(QCA.translate("video_window", "Invalid File"),
+                                    QCA.translate("video_window", "The selected input file does not exist"),
+                                    type="critical")
+            else:
+                self._openAlert(QCA.translate("video_window", "No File Selected"),
+                                QCA.translate("video_window", "Please select an input file"))
         return f
 
     ###Utils###

@@ -9,4 +9,4 @@ class SNLineEdit(QtW.QLineEdit):
         super().__init__(contents, parent, objectName=objectName)
 
         #self.setValidator(QtG.QDoubleValidator(parent)) # QDoubleValidator does not work for locales which do not use the decimal point "."
-        self.setValidator(QtG.QRegularExpressionValidator(r"[+-]?\d+\.?\d*([eE][+-]?\d+)?", parent)) # A regular expression seems more reliable.
+        self.setValidator(QtG.QRegularExpressionValidator(r"-?inf|[+-]?\d+\.?\d*([eE][+-]?\d+)?", parent)) # A regular expression seems more reliable.

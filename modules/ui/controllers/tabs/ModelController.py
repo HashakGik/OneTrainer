@@ -55,17 +55,17 @@ class ModelController(BaseController):
             self._connectFileDialog(btn, led, is_dir=False, save=False,
                                title=QCA.translate("dialog_window", "Open model"),
                                filters=QCA.translate("filetype_filters",
-                                                     "Safetensors (*.safetensors);;Diffusers (model_index.json);;Checkpoints (*.ckpt, *.pt, *.bin);;All Files (*.*)"))
+                                                     "Safetensors (*.safetensors);;Diffusers (model_index.json);;Checkpoints (*.ckpt *.pt *.bin);;All Files (*.*)"))
 
         self._connectFileDialog(self.ui.transformerBtn, self.ui.transformerLed, is_dir=False, save=False,
                                 title=QCA.translate("dialog_window", "Open model"),
                                 filters=QCA.translate("filetype_filters",
-                                                      "Safetensors (*.safetensors);;Diffusers (model_index.json);;Checkpoints (*.ckpt, *.pt, *.bin);;GGUF (*.gguf);;All Files (*.*)"))
+                                                      "Safetensors (*.safetensors);;Diffusers (model_index.json);;Checkpoints (*.ckpt *.pt *.bin);;GGUF (*.gguf);;All Files (*.*)"))
 
         self._connectFileDialog(self.ui.modelOutputBtn, self.ui.modelOutputLed, is_dir=False, save=True,
                                title=QCA.translate("dialog_window", "Save output model"),
                                filters=QCA.translate("filetype_filters",
-                                                     "Safetensors (*.safetensors);;Diffusers (model_index.json);;Checkpoints (*.ckpt, *.pt, *.bin);;All Files (*.*)"))
+                                                     "Safetensors (*.safetensors);;Diffusers (model_index.json);;Checkpoints (*.ckpt *.pt *.bin);;All Files (*.*)"))
 
         self._connect(QtW.QApplication.instance().modelChanged, self.__updateModel(), update_after_connect=True, initial_args=[StateModel.instance().get_state("model_type"), StateModel.instance().get_state("training_method")])
 

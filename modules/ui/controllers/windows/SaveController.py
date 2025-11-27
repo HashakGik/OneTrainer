@@ -1,6 +1,7 @@
 from modules.ui.controllers.BaseController import BaseController
 from modules.ui.models.StateModel import StateModel
 
+import PySide6.QtGui as QtGui
 import PySide6.QtWidgets as QtW
 from PySide6.QtCore import Slot
 
@@ -14,6 +15,9 @@ class SaveController(BaseController):
     def _connectUIBehavior(self):
         self._connect(self.ui.cancelBtn.clicked, lambda: self.ui.hide())
         self._connect(self.ui.okBtn.clicked, self.__save())
+
+    def _connectInputValidation(self):
+        self.ui.configCmb.setValidator(QtGui.QRegularExpressionValidator(r"[a-zA-Z0-9_\-.][a-zA-Z0-9_\-. ]*", self.ui))
 
     ###Reactions###
 
