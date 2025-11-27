@@ -2,6 +2,7 @@ from modules.ui.controllers.BaseController import BaseController
 from modules.util.enum.DataType import DataType
 from modules.util.enum.ModelType import PeftType
 
+import PySide6.QtWidgets as QtW
 from PySide6.QtCore import QCoreApplication as QCA
 from PySide6.QtCore import Slot
 
@@ -33,8 +34,11 @@ class LoraController(BaseController):
                                title=QCA.translate("dialog_window", "Open LoRA/LoHA/OFT 2 base model"),
                                filters=QCA.translate("filetype_filters", "Safetensors (*.safetensors);;Diffusers (model_index.json);;Checkpoints (*.ckpt *.pt *.bin);;All Files (*.*)"))
 
-        self._connect(self.ui.typeCmb.activated, self.__updateType(), update_after_connect=True)
-        self._connect(self.ui.decomposeCbx.toggled, self.__updateDora(), update_after_connect=True, initial_args=[self.ui.decomposeCbx.isChecked()])
+        self._connect([QtW.QApplication.instance().stateChanged, self.ui.typeCmb.activated],
+                      self.__updateType(), update_after_connect=True)
+
+        self._connect([QtW.QApplication.instance().stateChanged, self.ui.decomposeCbx.toggled],
+                      self.__updateDora(), update_after_connect=True)
 
     def _connectInputValidation(self):
         # Alpha cannot be higher than rank.
@@ -51,8 +55,9 @@ class LoraController(BaseController):
     ###Reactions###
 
     def __updateDora(self):
-        @Slot(bool)
-        def f(enabled):
+        @Slot()
+        def f():
+            enabled = self.ui.decomposeCbx.isChecked()
             self.ui.normCbx.setEnabled(enabled)
             self.ui.outputAxisCbx.setEnabled(enabled)
         return f

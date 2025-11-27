@@ -24,23 +24,21 @@ class ConceptsController(BaseController):
     def _connectUIBehavior(self):
         self._connect(self.ui.addConceptBtn.clicked, self.__appendConcept())
         self._connect(self.ui.toggleBtn.clicked, self.__toggleConcepts())
+        self._connect(self.ui.clearBtn.clicked, self.__clearFilters())
 
         self._connect(QtW.QApplication.instance().stateChanged, self.__updateConfigs(), update_after_connect=True)
 
-        cb2 = self.__saveConfig()
-        self._connect(QtW.QApplication.instance().aboutToQuit, cb2)
-        self._connect(QtW.QApplication.instance().conceptsChanged, cb2)
+        self._connect([QtW.QApplication.instance().aboutToQuit, QtW.QApplication.instance().conceptsChanged],
+                      self.__saveConfig())
 
         self._connect(self.ui.presetCmb.textActivated, self.__loadConfig(), update_after_connect=True, initial_args=[self.ui.presetCmb.currentText()])
 
-        cb4 = self.__updateConcepts()
-        self._connect(QtW.QApplication.instance().conceptsChanged, cb4)
-        self._connect(QtW.QApplication.instance().stateChanged, cb4, update_after_connect=True)
+        self._connect([QtW.QApplication.instance().conceptsChanged, QtW.QApplication.instance().stateChanged],
+                      self.__updateConcepts(), update_after_connect=True)
 
-        self._connect(self.ui.clearBtn.clicked, self.__clearFilters())
-        self._connect(self.ui.searchLed.textChanged, lambda: QtW.QApplication.instance().conceptsChanged.emit()) # TODO: choose: editingFinished requires focus to leave the control, textChanged triggers an update for each character.
-        self._connect(self.ui.typeCmb.activated, lambda: QtW.QApplication.instance().conceptsChanged.emit())
-        self._connect(self.ui.showDisabledCbx.toggled, lambda: QtW.QApplication.instance().conceptsChanged.emit())
+
+        self._connect([self.ui.searchLed.textChanged, self.ui.typeCmb.activated, self.ui.showDisabledCbx.toggled, QtW.QApplication.instance().stateChanged],
+                      lambda: QtW.QApplication.instance().conceptsChanged.emit())
 
     def _loadPresets(self):
         for e in ConceptType.enabled_values(context="all"):

@@ -1,5 +1,6 @@
 from modules.ui.controllers.BaseController import BaseController
 
+import PySide6.QtWidgets as QtW
 from PySide6.QtCore import QCoreApplication as QCA
 from PySide6.QtCore import Slot
 
@@ -17,12 +18,14 @@ class DataController(BaseController):
     ###FSM###
 
     def _connectUIBehavior(self):
-        self._connect(self.ui.latentCachingCbx.toggled, self.__updateCaching(), update_after_connect=True, initial_args=[self.ui.latentCachingCbx.isChecked()])
+        self._connect([self.ui.latentCachingCbx.toggled, QtW.QApplication.instance().stateChanged],
+                      self.__updateCaching(), update_after_connect=True)
 
     ###Reactions###
 
     def __updateCaching(self):
-        @Slot(bool)
-        def f(enabled):
+        @Slot()
+        def f():
+            enabled = self.ui.latentCachingCbx.isChecked()
             self.ui.clearCacheCbx.setEnabled(enabled)
         return f

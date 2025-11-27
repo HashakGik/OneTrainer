@@ -4,6 +4,7 @@ from modules.util.enum.GradientReducePrecision import GradientReducePrecision
 from modules.util.enum.TimeUnit import TimeUnit
 
 import PySide6.QtGui as QtGui
+import PySide6.QtWidgets as QtW
 from PySide6.QtCore import QCoreApplication as QCA
 from PySide6.QtCore import Slot
 
@@ -47,12 +48,17 @@ class GeneralController(BaseController):
         self._connectFileDialog(self.ui.debugBtn, self.ui.debugLed, is_dir=True, save=False,
                                title=QCA.translate("dialog_window", "Open Debug directory"))
 
-        self._connect(self.ui.workspaceLed.editingFinished, self.__changeWorkspace())
-        self._connect(self.ui.alwaysOnTensorboardCbx.toggled, self.__toggleTensorboard())
+        self._connect([self.ui.alwaysOnTensorboardCbx.toggled, self.ui.workspaceLed.editingFinished, QtW.QApplication.instance().stateChanged],
+                      self.__toggleTensorboard(), update_after_connect=True)
 
-        self._connect(self.ui.validateCbx.toggled, self.__updateValidate(), update_after_connect=True, initial_args=[self.ui.validateCbx.isChecked()])
-        self._connect(self.ui.tensorboardCbx.toggled, self.__updateTensorboard(), update_after_connect=True, initial_args=[self.ui.tensorboardCbx.isChecked()])
-        self._connect(self.ui.debugCbx.toggled, self.__updateDebug(), update_after_connect=True, initial_args=[self.ui.debugCbx.isChecked()])
+        self._connect([self.ui.validateCbx.toggled, QtW.QApplication.instance().stateChanged],
+                      self.__updateValidate(), update_after_connect=True)
+
+        self._connect([self.ui.tensorboardCbx.toggled, QtW.QApplication.instance().stateChanged],
+                      self.__updateTensorboard(), update_after_connect=True)
+
+        self._connect([self.ui.debugCbx.toggled, QtW.QApplication.instance().stateChanged],
+                      self.__updateDebug(), update_after_connect=True)
 
     def _loadPresets(self):
         for e in GradientReducePrecision.enabled_values():
@@ -72,16 +78,18 @@ class GeneralController(BaseController):
     ###Reactions###
 
     def __updateValidate(self):
-        @Slot(bool)
-        def f(enabled):
+        @Slot()
+        def f():
+            enabled = self.ui.validateCbx.isChecked()
             self.ui.validateLbl.setEnabled(enabled)
             self.ui.validateSbx.setEnabled(enabled)
             self.ui.validateCmb.setEnabled(enabled)
         return f
 
     def __updateTensorboard(self):
-        @Slot(bool)
-        def f(enabled):
+        @Slot()
+        def f():
+            enabled = self.ui.tensorboardCbx.isChecked()
             self.ui.alwaysOnTensorboardCbx.setEnabled(enabled)
             self.ui.exposeTensorboardCbx.setEnabled(enabled)
             self.ui.tensorboardLbl.setEnabled(enabled)
@@ -89,24 +97,18 @@ class GeneralController(BaseController):
         return f
 
     def __updateDebug(self):
-        @Slot(bool)
-        def f(enabled):
+        @Slot()
+        def f():
+            enabled = self.ui.debugCbx.isChecked()
             self.ui.debugLbl.setEnabled(enabled)
             self.ui.debugLed.setEnabled(enabled)
             self.ui.debugBtn.setEnabled(enabled)
         return f
 
-    def __changeWorkspace(self):
+    def __toggleTensorboard(self):
         @Slot()
         def f():
-            if StateModel.instance().getWorkspace("tensorboard_always_on"):
-                StateModel.instance().start_tensorboard()
-        return f
-
-    def __toggleTensorboard(self):
-        @Slot(bool)
-        def f(enabled):
-            if enabled:
+            if self.ui.alwaysOnTensorboardCbx.isChecked():
                 StateModel.instance().start_tensorboard()
             else:
                 StateModel.instance().stop_tensorboard()

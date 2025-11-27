@@ -96,11 +96,15 @@ class BaseController:
 
     # Connects a signal to a slot, possibly segregating it into a named category (for selectively disconnecting it later).
     # If update_after_connect is true, notifies the controller that the slot must be fired at the end of __init__. initial_args is a list of values to be passed during this initial firing.
-    def _connect(self, signal, slot, key="global", update_after_connect=False, initial_args=None):
-        c = signal.connect(slot)
-        if key not in self.connections:
-            self.connections[key] = []
-        self.connections[key].append(c)
+    def _connect(self, signal_list, slot, key="global", update_after_connect=False, initial_args=None):
+        if not isinstance(signal_list, list):
+            signal_list = [signal_list]
+
+        for signal in signal_list:
+            c = signal.connect(slot)
+            if key not in self.connections:
+                self.connections[key] = []
+            self.connections[key].append(c)
 
         # Schedule every update to be executed at the end of __init__
         if update_after_connect:

@@ -61,9 +61,8 @@ class CloudController(BaseController):
         self._connect(self.ui.gpuBtn.clicked, self.__getGPUTypes())
         self._connect(self.ui.reattachBtn.clicked, self.__reattach())
 
-        cb = self.__enableCloud()
-        self._connect(self.ui.enabledCbx.toggled, cb)
-        self._connect(QtW.QApplication.instance().stateChanged, cb, update_after_connect=True)
+        self._connect([self.ui.enabledCbx.toggled, QtW.QApplication.instance().stateChanged],
+                      self.__enableCloud(), update_after_connect=True)
 
 
 

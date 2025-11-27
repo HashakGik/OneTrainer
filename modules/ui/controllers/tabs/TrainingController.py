@@ -167,26 +167,26 @@ class TrainingController(BaseController):
         self.ax.tick_params(axis='y', which="both")
 
     def _connectUIBehavior(self):
-        self._connect(self.ui.layerFilterCmb.activated, self.__connectLayerFilter())
+        self._connect(self.ui.optimizerBtn.clicked, lambda: self._openWindow(self.optimizer_window, fixed_size=True))
+
+        self._connect([self.ui.layerFilterCmb.activated, QtW.QApplication.instance().stateChanged],
+                      self.__connectLayerFilter())
 
         self._connect(QtW.QApplication.instance().stateChanged, self.__updateSchedulerParams(), update_after_connect=True)
         self._connect(self.ui.tableWidget.currentCellChanged, self.__changeCell())
         self._connect(self.ui.updatePreviewBtn.clicked, self.__updatePreview())
 
-        self._connect(QtW.QApplication.instance().modelChanged, self.__updateModel(), update_after_connect=True, initial_args=[StateModel.instance().get_state("model_type"),
-                 StateModel.instance().get_state("training_method")])
+        self._connect(QtW.QApplication.instance().modelChanged, self.__updateModel(), update_after_connect=True,
+                      initial_args=[StateModel.instance().get_state("model_type"), StateModel.instance().get_state("training_method")])
 
 
-        cb = self.__enableCustomScheduler()  # This must be connected after __updateModel, otherwise it will not enable/disable custom parameters correctly.
-        self._connect(self.ui.schedulerCmb.activated, cb)
-        self._connect(QtW.QApplication.instance().stateChanged, cb, update_after_connect=True)
+        self._connect([self.ui.schedulerCmb.activated, QtW.QApplication.instance().stateChanged],
+                      self.__enableCustomScheduler(), update_after_connect=True)
 
-        cb2 = self.__enableMaskedTraining()
-        self._connect(self.ui.maskedTrainingCbx.toggled, cb2, update_after_connect=True)
-        self._connect(QtW.QApplication.instance().stateChanged, cb2)
+        self._connect([self.ui.maskedTrainingCbx.toggled, QtW.QApplication.instance().stateChanged],
+                      self.__enableMaskedTraining(), update_after_connect=True)
 
-        self._connect(self.ui.optimizerBtn.clicked, lambda: self._openWindow(self.optimizer_window, fixed_size=True))
-        self._connect(self.ui.optimizerCmb.activated, self.__updateOptimizer())
+        self._connect([self.ui.optimizerCmb.activated, QtW.QApplication.instance().stateChanged], self.__updateOptimizer(), update_after_connect=True)
 
         # At the beginning invalidate the gui.
         self.optimizer_window.ui.optimizerCmb.setCurrentIndex(self.ui.optimizerCmb.currentIndex())
@@ -255,8 +255,8 @@ class TrainingController(BaseController):
 
 
     def __updateOptimizer(self):
-        @Slot(int)
-        def f(value):
+        @Slot()
+        def f():
             self.optimizer_window.ui.optimizerCmb.setCurrentIndex(self.ui.optimizerCmb.currentIndex())
             QtW.QApplication.instance().optimizerChanged.emit(self.ui.optimizerCmb.currentData())
         return f

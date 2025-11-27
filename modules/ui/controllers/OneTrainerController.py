@@ -51,26 +51,25 @@ class OnetrainerController(BaseController):
         self._connect(self.ui.wikiBtn.clicked, lambda: self._openUrl("https://github.com/Nerogar/OneTrainer/wiki"))
         self._connect(self.ui.saveConfigBtn.clicked, lambda: self._openWindow(self.save_window, fixed_size=True))
         self._connect(self.ui.exportBtn.clicked, lambda: self.__exportConfig())
-
-        self._connect(self.ui.trainingTypeCmb.activated, self.__changeModel())
-        self._connect(self.ui.modelTypeCmb.activated, self.__changeModel())
-
-        self._connect(self.ui.configCmb.activated, lambda idx: self.__loadConfig(self.ui.configCmb.currentData(), idx))
-
-        self._connect(self.ui.modelTypeCmb.activated, self.__updateModel(), update_after_connect=True)
-        self._connect(QtW.QApplication.instance().stateChanged, self.__updateConfigs(), update_after_connect=True)
-        self._connect(QtW.QApplication.instance().stateChanged, self.__changeModel(), update_after_connect=True)
-
-        self._connect(QtW.QApplication.instance().savedConfig, self.__updateSelectedConfig())
-
         self._connect(self.ui.startBtn.clicked, self.__toggleTrain())
         self._connect(self.ui.debugBtn.clicked, self.__startDebug())
         self._connect(self.ui.tensorboardBtn.clicked, self.__openTensorboard())
 
+        self._connect([self.ui.trainingTypeCmb.activated, self.ui.modelTypeCmb.activated, QtW.QApplication.instance().stateChanged],
+                      self.__changeModel(), update_after_connect=True)
+
+        self._connect(self.ui.configCmb.activated, lambda idx: self.__loadConfig(self.ui.configCmb.currentData(), idx))
+
+        self._connect([self.ui.modelTypeCmb.activated, QtW.QApplication.instance().stateChanged],
+                      self.__updateModel(), update_after_connect=True)
+
+        self._connect(QtW.QApplication.instance().stateChanged, self.__updateConfigs(), update_after_connect=True)
+        self._connect(QtW.QApplication.instance().savedConfig, self.__updateSelectedConfig())
+
         self._connect(QtW.QApplication.instance().aboutToQuit, self.__onQuit())
 
         self.__loadConfig("training_presets/#.json")  # Load last config.
-        self.__enableControls("enabled")()
+        QtW.QApplication.instance().stateChanged.emit()
 
     def _loadPresets(self):
         for e in ModelType.enabled_values(context="main_window"):
@@ -147,7 +146,11 @@ class OnetrainerController(BaseController):
                 self.ui.trainingTypeCmb.setCurrentIndex(self.ui.trainingTypeCmb.findData(old_training_type))
                 self.ui.trainingTypeCmb.activated.emit(self.ui.trainingTypeCmb.findData(old_training_type))
             else:
-                self.ui.trainingTypeCmb.activated.emit(0)
+                old_training_type = StateModel.instance().get_state("training_method")
+                if old_training_type is not None:
+                    self.ui.trainingTypeCmb.setCurrentIndex(self.ui.trainingTypeCmb.findData(old_training_type))
+                else:
+                    self.ui.trainingTypeCmb.activated.emit(0)
 
         return f
 

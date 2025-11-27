@@ -111,7 +111,7 @@ class StateModel(SingletonConfigModel):
         if self.tensorboard_subprocess:
             self.stop_tensorboard()
 
-        ws, port, expose = self.bulk_read(["workspace_dir", "tensorboard_port", "tensorboard_expose"])
+        ws, port, expose = self.bulk_read("workspace_dir", "tensorboard_port", "tensorboard_expose")
 
         tensorboard_executable = os.path.join(os.path.dirname(sys.executable), "tensorboard")
         tensorboard_log_dir = os.path.join(ws, "tensorboard")
@@ -156,7 +156,7 @@ class StateModel(SingletonConfigModel):
     def get_gpus(self):
         gpus = []
 
-        type, key = self.bulk_read(["cloud.type", "secrets.cloud.api_key"])
+        type, key = self.bulk_read("cloud.type", "secrets.cloud.api_key")
 
         if type == CloudType.RUNPOD:
             import runpod

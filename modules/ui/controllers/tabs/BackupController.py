@@ -3,6 +3,7 @@ from modules.ui.models.TrainingModel import TrainingModel
 from modules.ui.utils.WorkerPool import WorkerPool
 from modules.util.enum.TimeUnit import TimeUnit
 
+import PySide6.QtWidgets as QtW
 from PySide6.QtCore import QCoreApplication as QCA
 from PySide6.QtCore import Slot
 
@@ -26,12 +27,17 @@ class BackupController(BaseController):
     ###FSM###
 
     def _connectUIBehavior(self):
-        self._connect(self.ui.backupCmb.activated, self.__updateBackup(), update_after_connect=True)
-        self._connect(self.ui.rollingBackupCbx.toggled, self.__updateRollingBackup(), update_after_connect=True, initial_args=[self.ui.rollingBackupCbx.isChecked()])
-        self._connect(self.ui.saveCmb.activated, self.__updateSave(), update_after_connect=True)
-
         self._connect(self.ui.backupBtn.clicked, self.__startBackup())
         self._connect(self.ui.saveBtn.clicked, self.__startSave())
+
+        self._connect([QtW.QApplication.instance().stateChanged, self.ui.backupCmb.activated],
+                      self.__updateBackup(), update_after_connect=True)
+
+        self._connect([QtW.QApplication.instance().stateChanged, self.ui.saveCmb.activated],
+                      self.__updateSave(), update_after_connect=True)
+
+        self._connect([QtW.QApplication.instance().stateChanged, self.ui.rollingBackupCbx.toggled],
+                      self.__updateRollingBackup(), update_after_connect=True)
 
     def _loadPresets(self):
         for e in TimeUnit.enabled_values():
@@ -85,10 +91,11 @@ class BackupController(BaseController):
         return f
 
     def __updateRollingBackup(self):
-        @Slot(bool)
-        def f(enabled):
-            self.ui.rollingCountSbx.setEnabled(enabled)
-            self.ui.rollingCountLbl.setEnabled(enabled)
+        @Slot()
+        def f():
+            enabled = self.ui.rollingBackupCbx.isChecked()
+            self.ui.rollingCountSbx.setEnabled(enabled and self.ui.backupCmb.currentData() != TimeUnit.NEVER)
+            self.ui.rollingCountLbl.setEnabled(enabled and self.ui.backupCmb.currentData() != TimeUnit.NEVER)
 
         return f
 

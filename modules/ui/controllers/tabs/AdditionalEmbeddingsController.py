@@ -16,12 +16,11 @@ class AdditionalEmbeddingsController(BaseController):
 
     def _connectUIBehavior(self):
         self._connect(self.ui.addEmbeddingBtn.clicked, self.__appendEmbedding())
-
-        cb = self.__updateEmbeddings()
-        self._connect(QtW.QApplication.instance().embeddingsChanged, cb)
-        self._connect(QtW.QApplication.instance().stateChanged, cb, update_after_connect=True)
-
         self._connect(self.ui.enableBtn.clicked, self.__enableEmbeddings())
+
+        self._connect([QtW.QApplication.instance().embeddingsChanged, QtW.QApplication.instance().stateChanged],
+                      self.__updateEmbeddings(), update_after_connect=True)
+
 
     ###Reactions###
 

@@ -38,25 +38,20 @@ class SamplingController(BaseController):
     def _connectUIBehavior(self):
         self._connect(self.ui.addSampleBtn.clicked, self.__appendSample())
         self._connect(self.ui.toggleBtn.clicked, self.__toggleSamples())
-
         self._connect(self.ui.manualSampleBtn.clicked, self.__openSampleWindow())
+        self._connect(self.ui.sampleNowBtn.clicked, self.__startSample())
 
         self._connect(QtW.QApplication.instance().stateChanged, self.__updateConfigs(), update_after_connect=True)
 
-        cb = self.__updateSamples()
-        self._connect(QtW.QApplication.instance().samplesChanged, cb)
-        self._connect(QtW.QApplication.instance().stateChanged, cb, update_after_connect=True)
+        self._connect([QtW.QApplication.instance().samplesChanged, QtW.QApplication.instance().stateChanged],
+                      self.__updateSamples(), update_after_connect=True)
 
-        cb2 = self.__loadConfig()
-        self._connect(self.ui.configCmb.textActivated, cb2, update_after_connect=True, initial_args=[self.ui.configCmb.currentText()])
-        self._connect(QtW.QApplication.instance().stateChanged, cb2)
+        self._connect([self.ui.configCmb.textActivated, QtW.QApplication.instance().stateChanged],
+                      self.__loadConfig(), update_after_connect=True, initial_args=[self.ui.configCmb.currentText()])
 
+        self._connect([QtW.QApplication.instance().aboutToQuit, QtW.QApplication.instance().samplesChanged],
+                      self.__saveConfig())
 
-        cb4 = self.__saveConfig()
-        self._connect(QtW.QApplication.instance().aboutToQuit, cb4)
-        self._connect(QtW.QApplication.instance().samplesChanged, cb4)
-
-        self._connect(self.ui.sampleNowBtn.clicked, self.__startSample())
 
     def _connectInputValidation(self):
         self.ui.configCmb.setValidator(QtGui.QRegularExpressionValidator(r"[a-zA-Z0-9_\-.][a-zA-Z0-9_\-. ]*", self.ui))
