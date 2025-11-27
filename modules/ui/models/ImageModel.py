@@ -272,6 +272,8 @@ class ImageModel(SingletonConfigModel):
         # We want to check only images.
         files = [f for f in files if self._filter_is_image(f)]
 
+        # TODO: maybe this should also verify that there are no ambiguous images (e.g., "1.png" and "1.jpeg" in the same folder)
+
         is_valid = self.pool.map(_verify_image, files)
 
         total = len(is_valid)
@@ -299,7 +301,7 @@ class ImageModel(SingletonConfigModel):
             # Probably it was an edge case like "img.png + img.jpeg + img.txt + img-masklabel.png", somehow desynchronizing all the other valid triplets?
             # The other possible cause may be an incorrect exception handling.
 
-            # TODO Improvement: should unlink() be replaced by the OS' send to recycling bin?
+            # TODO Improvement: should unlink() be replaced by the OS' send to recycling bin? https://pypi.org/project/Send2Trash/
 
 
             groups = {}

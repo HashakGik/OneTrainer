@@ -78,17 +78,24 @@ class DatasetController(BaseController):
             },
             {"type": ToolType.SEPARATOR},
             {
+                "fn": self.__clearMask(),
+                "type": ToolType.BUTTON,
+                "text": QCA.translate("toolbar_item", "Clear Mask"),
+                "tooltip": QCA.translate("toolbar_item", "Clear mask (Del, or Middle Click)"),
+                "shortcut": "Del"
+            },
+            {
                 "fn": self.__clearAll(),
                 "type": ToolType.BUTTON,
                 "text": QCA.translate("toolbar_item", "Clear All"),
-                "tooltip": QCA.translate("toolbar_item", "Clear mask and caption (Del)"),
-                "shortcut": "Del"
+                "tooltip": QCA.translate("toolbar_item", "Clear mask and caption (CTRL+Del)"),
+                "shortcut": "Ctrl+Del"
             },
             {
                 "fn": self.__resetMask(),
                 "type": ToolType.BUTTON,
                 "text": QCA.translate("toolbar_item", "Reset Mask"),
-                "tooltip": QCA.translate("toolbar_item", "Reset mask (CTRL+R, or Middle Click)"),
+                "tooltip": QCA.translate("toolbar_item", "Reset mask (CTRL+R)"),
                 "shortcut": "Ctrl+R"
             },
             {"type": ToolType.SEPARATOR},
@@ -118,8 +125,8 @@ class DatasetController(BaseController):
                 "fn": self.__deleteSample(),
                 "type": ToolType.BUTTON,
                 "icon": f"resources/icons/buttons/{self.theme}/trash-2.svg",
-                "tooltip": QCA.translate("toolbar_item", "Delete image, mask and caption (CTRL+Del)"),
-                "shortcut": "Ctrl+Del"
+                "tooltip": QCA.translate("toolbar_item", "Delete image, mask and caption (CTRL+SHIFT+Del)"),
+                "shortcut": "Ctrl+Shift+Del"
             },
         ]
 
@@ -273,8 +280,9 @@ class DatasetController(BaseController):
                                     type="question",
                                     buttons=QtW.QMessageBox.StandardButton.Yes | QtW.QMessageBox.StandardButton.No)
             if choice == QtW.QMessageBox.StandardButton.Yes:
-                MaskHistoryModel.instance().reset()
-                MaskHistoryModel.instance().clearHistory()
+                MaskHistoryModel.instance().clear_history()
+                MaskHistoryModel.instance().delete_mask()
+                MaskHistoryModel.instance().commit()
                 self.ui.captionTed.setPlainText("")
 
                 self.__updateCanvas()
@@ -283,7 +291,16 @@ class DatasetController(BaseController):
     def __resetMask(self):
         @Slot()
         def f():
-            MaskHistoryModel.instance().reset()
+            MaskHistoryModel.instance().clear_history()
+
+            self.__updateCanvas()
+        return f
+
+    def __clearMask(self):
+        @Slot()
+        def f():
+            MaskHistoryModel.instance().delete_mask()
+            MaskHistoryModel.instance().commit()
 
             self.__updateCanvas()
         return f
@@ -310,7 +327,7 @@ class DatasetController(BaseController):
             choice, new_mask, mask_path = self.__checkMaskChanged()
             if choice == QtW.QMessageBox.StandardButton.Yes:
                 new_mask_img = Image.fromarray(new_mask, "L")
-                MaskHistoryModel.instance().loadMask(new_mask)
+                MaskHistoryModel.instance().load_mask(new_mask)
                 new_mask_img.convert("RGB").save(mask_path)
 
         return f
@@ -384,7 +401,7 @@ class DatasetController(BaseController):
                                 if mask is None:
                                     mask = Image.new("L", self.image.size, 1)
 
-                                MaskHistoryModel.instance().loadMask(np.asarray(mask))
+                                MaskHistoryModel.instance().load_mask(np.asarray(mask))
                                 self.im = self.ax.imshow(self.image)
 
                                 self.__updateCanvas()
@@ -400,14 +417,16 @@ class DatasetController(BaseController):
             path = DatasetModel.instance().get_state("path")
             if path is not None:
                 self._browse(path)
+            else:
+                self._openAlert(QCA.translate("dataset_window", "No Dataset Loaded"),
+                                QCA.translate("dataset_window", "Please open a dataset first"))
         return f
 
     def __onClicked(self):
         @Slot(MouseButton, int, int)
         def f(btn, x, y):
             if btn == MouseButton.MIDDLE:
-                MaskHistoryModel.instance().reset()
-                self.__updateCanvas()
+                MaskHistoryModel.instance().delete_mask() # This click is also associated with a release, which will commit the change and update the canvas.
         return f
 
     def __onReleased(self):
@@ -449,13 +468,11 @@ class DatasetController(BaseController):
         def f(btn, x0, y0, x1, y1):
             if x0 >= 0 and y0 >= 0 and x1 >= 0 and y1 >= 0:
                 if btn == MouseButton.LEFT:
-                    MaskHistoryModel.instance().paintStroke(x0, y0, x1, y1, int(self.brush), 0, commit=False)  # Draw stroke 0 from x0,y0 to x1,y1
+                    MaskHistoryModel.instance().paint_stroke(x0, y0, x1, y1, int(self.brush), 0, commit=False)  # Draw stroke 0 from x0,y0 to x1,y1
                     self.dirty = True
-                    #self.__updateCanvas()
                 elif btn == MouseButton.RIGHT:
-                    MaskHistoryModel.instance().paintStroke(x0, y0, x1, y1, int(self.brush), 1, commit=False)
+                    MaskHistoryModel.instance().paint_stroke(x0, y0, x1, y1, int(self.brush), 1, commit=False)
                     self.dirty = True
-                    #self.__updateCanvas()
 
         return f
 
