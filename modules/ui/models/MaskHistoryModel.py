@@ -94,17 +94,18 @@ class MaskHistoryModel(SingletonConfigModel):
     def paintStroke(self, x0, y0, x1, y1, radius, color, commit=False):
         # TODO: this should be protected from race conditions, however, locking every single stroke is noticeably slow.
         # The solution may be to acquire the lock during mouse pressed and release it during commit, but can introduce bugs and violates encapsulation.
-        if self.config.current_mask is not None:
-            # Draw line between points
-            line_width = 2 * radius + 1
-            cv2.line(self.config.current_mask, (x0, y0), (x1, y1), color, line_width)
+        with self.critical_region_write():
+            if self.config.current_mask is not None:
+                # Draw line between points
+                line_width = 2 * radius + 1
+                cv2.line(self.config.current_mask, (x0, y0), (x1, y1), color, line_width)
 
-            # Draw circle at start point
-            cv2.circle(self.config.current_mask, (x0, y0), radius, color, -1)
+                # Draw circle at start point
+                cv2.circle(self.config.current_mask, (x0, y0), radius, color, -1)
 
-            # Draw circle at end point if different from start
-            if (x0, y0) != (x1, y1):
-                cv2.circle(self.config.current_mask, (x1, y1), radius, color, -1)
+                # Draw circle at end point if different from start
+                if (x0, y0) != (x1, y1):
+                    cv2.circle(self.config.current_mask, (x1, y1), radius, color, -1)
 
-            if commit:
-                self.commit()
+                if commit:
+                    self.commit()

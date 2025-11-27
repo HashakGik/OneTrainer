@@ -54,6 +54,8 @@ class ImageController(BaseController):
     def __startProcessFiles(self):
         @Slot()
         def f():
+            self.ui.statusTed.setPlainText("")
+
             worker, name = WorkerPool.instance().createNamed(self.__processFiles(), "process_images", abort_flag=ImageModel.instance().abort_flag, inject_progress_callback=True)
             if worker is not None:
                 worker.connectCallbacks(init_fn=self.__enableControls(False), result_fn=None,

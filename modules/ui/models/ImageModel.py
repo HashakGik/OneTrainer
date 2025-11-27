@@ -170,7 +170,7 @@ class ImageModel(SingletonConfigModel):
             if os.path.isdir(directory):
                 path = Path(directory)
                 files = [f for f in path.iterdir() if f.is_file()]
-                print(f"Found {len(files)} files in {directory}")
+                self.log("info", f"Found {len(files)} files in {directory}")
 
                 self.__run_operations(files)
 
@@ -224,10 +224,10 @@ class ImageModel(SingletonConfigModel):
                     self.__convert_to_webp(files)
                 elif op == ImageOperations.CONVERT_JXL:
                     self.__convert_to_jpegxl(files)
-            except Exception as e:
+            except Exception:
                 if self.progress_fn is not None:
                     self.progress_fn({"status": f"Error during {op.pretty_print().lower()}"})
-                    print(e)
+                    self.log("critical", traceback.format_exc())
 
         if self.abort_flag.is_set():
             if self.progress_fn is not None:
@@ -291,7 +291,16 @@ class ImageModel(SingletonConfigModel):
     def __rename_files_sequentially(self, files):
         outfiles = files
         if len(files) > 0:
-            # TODO: THIS DOES NOT WORK! FILES ARE RENAMED IN THE WRONG ORDER
+            # TODO: This does not always work (after processing multiple files are deleted, and caption/mask become associated with the wrong image), but could NOT reproduce bug with:
+            # dataset with images + masks + captions
+            # dataset with some captions missing
+            # dataset with some masks missing
+            # dataset with mixed png, jpeg # TODO: do we also want to add an operation to convert all images to the same format (other than webp/jxl)?
+            # Probably it was an edge case like "img.png + img.jpeg + img.txt + img-masklabel.png", somehow desynchronizing all the other valid triplets?
+            # The other possible cause may be an incorrect exception handling.
+
+            # TODO Improvement: should unlink() be replaced by the OS' send to recycling bin?
+
 
             groups = {}
 
@@ -458,7 +467,7 @@ class ImageModel(SingletonConfigModel):
         skipped = total - processed
 
         bytes_saved = sum([r[1] for r in result])
-        avg_bytes_saved = bytes_saved / total
+        avg_bytes_saved = bytes_saved / total if total > 0 else 0
 
         if self.progress_fn is not None:
             self.progress_fn({"data": f"Completed optimization: {processed} PNGs optimized, {skipped} skipped. Saved {bytes_saved} bytes ({avg_bytes_saved} average bytes per file)"})

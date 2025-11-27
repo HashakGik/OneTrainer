@@ -14,7 +14,7 @@ import PySide6.QtGui as QtG
 import PySide6.QtWidgets as QtW
 from PIL import Image
 from PySide6.QtCore import QCoreApplication as QCA
-from PySide6.QtCore import Slot
+from PySide6.QtCore import QTimer, Slot
 
 
 class DatasetController(BaseController):
@@ -130,6 +130,9 @@ class DatasetController(BaseController):
         self.im = None
         self.image = None
         self.current_image_path = None
+        self.dirty = False
+
+        self.timer = QTimer()
 
         self.canvas = FigureWidget(parent=self.ui, width=7, height=5, zoom_tools=True, other_tools=self.tools, emit_clicked=True, emit_moved=True, emit_wheel=True, emit_released=True, use_data_coordinates=True)
         self.ax = self.canvas.figure.subplots() # TODO: when panning, the drawing area changes size. Probably there is some matplotlib option to set.
@@ -171,8 +174,14 @@ class DatasetController(BaseController):
         self._connect(self.canvas.wheelUp, self.__onWheelUp())
         self._connect(self.canvas.wheelDown, self.__onWheelDown())
 
+        self._connect(self.timer.timeout, self.__redrawCanvas())
+
         self.canvas.registerTool(EditMode.DRAW, moved_fn=self.__onDrawMoved(), use_mpl_event=False)
         self.canvas.registerTool(EditMode.FILL, clicked_fn=self.__onMaskClicked(), use_mpl_event=False)
+
+        self.timer.setInterval(50)
+        self.timer.start()
+
 
     def _loadPresets(self):
         for e in FileFilter.enabled_values():
@@ -182,6 +191,14 @@ class DatasetController(BaseController):
             self.ui.captionFilterCmb.addItem(e.pretty_print(), userData=e)
 
     ###Reactions###
+
+    def __redrawCanvas(self):
+        @Slot()
+        def f():
+            if self.dirty:
+                self.dirty = False
+                self.__updateCanvas()
+        return f
 
     def __openDataset(self):
         @Slot()
@@ -433,10 +450,12 @@ class DatasetController(BaseController):
             if x0 >= 0 and y0 >= 0 and x1 >= 0 and y1 >= 0:
                 if btn == MouseButton.LEFT:
                     MaskHistoryModel.instance().paintStroke(x0, y0, x1, y1, int(self.brush), 0, commit=False)  # Draw stroke 0 from x0,y0 to x1,y1
-                    self.__updateCanvas()
+                    self.dirty = True
+                    #self.__updateCanvas()
                 elif btn == MouseButton.RIGHT:
                     MaskHistoryModel.instance().paintStroke(x0, y0, x1, y1, int(self.brush), 1, commit=False)
-                    self.__updateCanvas()
+                    self.dirty = True
+                    #self.__updateCanvas()
 
         return f
 
