@@ -84,7 +84,7 @@ class MaskHistoryModel(SingletonConfigModel):
 
     def delete_mask(self):
         with self.critical_region_write():
-            self.config.current_mask = np.ones_like(self.config.current_mask)
+            self.config.current_mask = np.ones_like(self.config.current_mask) * 255
 
 
     def fill(self, x, y, color):
