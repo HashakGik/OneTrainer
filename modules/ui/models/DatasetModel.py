@@ -67,7 +67,7 @@ class DatasetModel(SingletonConfigModel):
                             results.append(entry.path[root_len:].replace("\\", "/"))
             self.set_state("files", sorted(results, key=lambda x: self.natural_sort_key(x)))
 
-    def getFilteredFiles(self):
+    def get_filtered_files(self):
         (path, unfiltered_files, file_filter, file_filter_mode,
          caption_filter, caption_filter_mode) = self.bulk_read("path", "files", "file_filter",
                                                                "file_filter_mode", "caption_filter", "caption_filter_mode")
@@ -148,7 +148,7 @@ class DatasetModel(SingletonConfigModel):
 
         return [convert(c) for c in re.split(r"(\d+)", s)]
 
-    def getSample(self, path):
+    def get_sample(self, path):
         image = None
         caption = None
         mask = None
@@ -170,7 +170,7 @@ class DatasetModel(SingletonConfigModel):
         return image, mask, caption
 
 
-    def getMaskPath(self, path):
+    def get_mask_path(self, path):
         basepath = self.get_state("path")
         image_path = Path(basepath) / path
         mask_path = image_path.with_name(f"{image_path.stem}-masklabel.png")
@@ -178,19 +178,19 @@ class DatasetModel(SingletonConfigModel):
         return mask_path, os.path.exists(mask_path)
 
 
-    def saveCaption(self, path, caption):
+    def save_caption(self, path, caption):
         basepath = self.get_state("path")
         image_path = Path(basepath) / path
         caption_path = image_path.with_suffix(".txt")
         caption_path.write_text(caption.strip(), encoding="utf-8")
 
-    def deleteCaption(self, path):
+    def delete_caption(self, path):
         basepath = self.get_state("path")
         image_path = Path(basepath) / path
         caption_path = image_path.with_suffix(".txt")
         caption_path.unlink(missing_ok=True)
 
-    def deleteSample(self, path):
+    def delete_sample(self, path):
         basepath = self.get_state("path")
         image_path = Path(basepath) / path
         mask_path = image_path.with_name(f"{image_path.stem}-masklabel.png")

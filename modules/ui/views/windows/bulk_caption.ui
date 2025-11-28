@@ -20,7 +20,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>Bulk Caption Tools</string>
+   <string>Bulk Caption Edit Tools</string>
   </property>
   <property name="sizeGripEnabled">
    <bool>false</bool>

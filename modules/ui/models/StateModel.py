@@ -71,7 +71,7 @@ class StateModel(SingletonConfigModel):
 
         return path
 
-    def setSchedulerParams(self, idx, key, value):
+    def set_scheduler_params(self, idx, key, value):
         with self.critical_region_write():
             if len(self.config.scheduler_params) == idx:
                 self.config.scheduler_params.append({"key": key, "value": value})

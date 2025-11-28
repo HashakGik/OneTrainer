@@ -38,14 +38,14 @@
    <item>
     <widget class="QPushButton" name="imageBtn">
      <property name="text">
-      <string>Image Tools</string>
+      <string>Bulk Image Edit Tools</string>
      </property>
     </widget>
    </item>
    <item>
     <widget class="QPushButton" name="bulkCaptionBtn">
      <property name="text">
-      <string>Bulk Caption Tools</string>
+      <string>Bulk Caption Edit Tools</string>
      </property>
     </widget>
    </item>

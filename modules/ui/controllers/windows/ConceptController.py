@@ -249,7 +249,7 @@ class ConceptController(BaseController):
     def __updateImage(self):
         @Slot()
         def f():
-            img, filename, caption = ConceptModel.instance().getImage(self.idx, self.file_index, show_augmentations=self.ui.showAugmentationsCbx.isChecked())
+            img, filename, caption = ConceptModel.instance().get_image(self.idx, self.file_index, show_augmentations=self.ui.showAugmentationsCbx.isChecked())
             self.ui.previewLbl.setPixmap(QtGui.QPixmap.fromImage(ImageQt(img)))
             self.ui.filenameLbl.setText(filename)
             self.ui.promptTed.setPlainText(caption)

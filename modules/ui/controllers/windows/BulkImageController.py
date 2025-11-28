@@ -1,7 +1,7 @@
 import os
 
 from modules.ui.controllers.BaseController import BaseController
-from modules.ui.models.ImageModel import ImageModel
+from modules.ui.models.BulkImageModel import BulkImageModel
 from modules.ui.utils.WorkerPool import WorkerPool
 from modules.util.enum.ImageMegapixels import ImageMegapixels
 from modules.util.enum.ImageOptimization import ImageOptimization
@@ -11,9 +11,9 @@ from PySide6.QtCore import QCoreApplication as QCA
 from PySide6.QtCore import Slot
 
 
-class ImageController(BaseController):
+class BulkImageController(BaseController):
     def __init__(self, loader, parent=None):
-        super().__init__(loader, "modules/ui/views/windows/image.ui", name=None, parent=parent)
+        super().__init__(loader, "modules/ui/views/windows/bulk_image.ui", name=None, parent=parent)
 
     ###FSM###
 
@@ -33,7 +33,7 @@ class ImageController(BaseController):
             "resize_custom_megapixels": "customSbx",
         }
 
-        self._connectStateUI(state_ui_connections, ImageModel.instance(), update_after_connect=True)
+        self._connectStateUI(state_ui_connections, BulkImageModel.instance(), update_after_connect=True)
         self._connect(self.ui.processBtn.clicked, self.__startProcessFiles())
         self._connect(self.ui.cancelBtn.clicked, self.__stopProcessFiles())
         self._connect(self.ui.resizeCmb.activated, self.__enableCustom(), update_after_connect=True)
@@ -60,7 +60,7 @@ class ImageController(BaseController):
 
             if self.ui.directoryLed.text() != "":
                 if os.path.isdir(self.ui.directoryLed.text()):
-                    worker, name = WorkerPool.instance().createNamed(self.__processFiles(), "process_images", abort_flag=ImageModel.instance().abort_flag, inject_progress_callback=True)
+                    worker, name = WorkerPool.instance().createNamed(self.__processFiles(), "process_images", abort_flag=BulkImageModel.instance().abort_flag, inject_progress_callback=True)
                     if worker is not None:
                         worker.connectCallbacks(init_fn=self.__enableControls(False), result_fn=None,
                                        finished_fn=self.__enableControls(True),
@@ -80,7 +80,7 @@ class ImageController(BaseController):
     def __stopProcessFiles(self):
         @Slot()
         def f():
-            ImageModel.instance().abort_flag.set()
+            BulkImageModel.instance().abort_flag.set()
         return f
 
     def __enableControls(self, enabled):
@@ -103,7 +103,7 @@ class ImageController(BaseController):
 
     def __processFiles(self):
         def f(progress_fn=None):
-            return ImageModel.instance().process_files(progress_fn=progress_fn)
+            return BulkImageModel.instance().process_files(progress_fn=progress_fn)
         return f
 
     def __updateStatus(self):

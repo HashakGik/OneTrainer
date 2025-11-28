@@ -365,7 +365,7 @@ class TrainingController(BaseController):
             value = self.ui.tableWidget.item(previousRow, 1)
 
             if key is not None and value is not None and key.text() != "" and value.text() != "":
-                StateModel.instance().setSchedulerParams(previousRow, key.text(), value.text())
+                StateModel.instance().set_scheduler_params(previousRow, key.text(), value.text())
 
                 if previousRow == total_rows - 1 and previousColumn == 1:
                     self.ui.tableWidget.insertRow(total_rows)

@@ -1,7 +1,7 @@
 import os
 
 from modules.ui.controllers.BaseController import BaseController
-from modules.ui.models.BulkModel import BulkModel
+from modules.ui.models.BulkCaptionModel import BulkCaptionModel
 from modules.ui.utils.WorkerPool import WorkerPool
 from modules.util.enum.BulkEditMode import BulkEditMode
 
@@ -30,7 +30,7 @@ class BulkCaptionController(BaseController):
             "regex_replace": "regexWithLed",
         }
 
-        self._connectStateUI(state_ui_connections, BulkModel.instance(), update_after_connect=True)
+        self._connectStateUI(state_ui_connections, BulkCaptionModel.instance(), update_after_connect=True)
         self._connect(self.ui.applyBtn.clicked, self.__startProcessFiles(read_only=False))
         self._connect(self.ui.previewBtn.clicked, self.__startProcessFiles(read_only=True))
 
@@ -86,6 +86,6 @@ class BulkCaptionController(BaseController):
 
     def __processFiles(self, read_only):
         def f(progress_fn=None):
-            return BulkModel.instance().bulk_edit(read_only=read_only, preview_n=10, progress_fn=progress_fn)
+            return BulkCaptionModel.instance().bulk_edit(read_only=read_only, preview_n=10, progress_fn=progress_fn)
 
         return f

@@ -1,9 +1,9 @@
 from modules.ui.controllers.BaseController import BaseController
 from modules.ui.controllers.windows.BulkCaptionController import BulkCaptionController
+from modules.ui.controllers.windows.BulkImageController import BulkImageController
 from modules.ui.controllers.windows.CaptionController import CaptionController
 from modules.ui.controllers.windows.ConvertController import ConvertController
 from modules.ui.controllers.windows.DatasetController import DatasetController
-from modules.ui.controllers.windows.ImageController import ImageController
 from modules.ui.controllers.windows.MaskController import MaskController
 from modules.ui.controllers.windows.ProfileController import ProfileController
 from modules.ui.controllers.windows.SampleController import SampleController
@@ -23,7 +23,7 @@ class ToolsController(BaseController):
         self.children = {"dataset": DatasetController(self.loader, parent=None),
                          "caption": CaptionController(self.loader, parent=None),
                          "mask": MaskController(self.loader, parent=None),
-                         "image": ImageController(self.loader, parent=None),
+                         "image": BulkImageController(self.loader, parent=None),
                          "bulk_caption": BulkCaptionController(self.loader, parent=None),
                         "video": VideoController(self.loader, parent=None),
                         "convert": ConvertController(self.loader, parent=None),

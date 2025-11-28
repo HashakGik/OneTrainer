@@ -12,9 +12,9 @@ from modules.ui.controllers.tabs.SamplingController import SamplingController
 from modules.ui.controllers.tabs.ToolsController import ToolsController
 from modules.ui.controllers.tabs.TrainingController import TrainingController
 from modules.ui.controllers.windows.SaveController import SaveController
-from modules.ui.models.BulkModel import BulkModel
+from modules.ui.models.BulkCaptionModel import BulkCaptionModel
+from modules.ui.models.BulkImageModel import BulkImageModel
 from modules.ui.models.CaptionModel import CaptionModel
-from modules.ui.models.ImageModel import ImageModel
 from modules.ui.models.MaskModel import MaskModel
 from modules.ui.models.StateModel import StateModel
 from modules.ui.models.TrainingModel import TrainingModel
@@ -46,6 +46,9 @@ class OnetrainerController(BaseController):
         self.children = {}
         self.__createTabs()
         self.training = False
+
+        # Non-editable QComboBoxes do not honor the maxVisibleItems property, unless the following style is enforced.
+        self.ui.configCmb.setStyleSheet("QComboBox { combobox-popup: 0; }")
 
     def _connectUIBehavior(self):
         self._connect(self.ui.wikiBtn.clicked, lambda: self._openUrl("https://github.com/Nerogar/OneTrainer/wiki"))
@@ -222,8 +225,8 @@ class OnetrainerController(BaseController):
             StateModel.instance().stop_tensorboard()
             CaptionModel.instance().release_model()
             MaskModel.instance().release_model()
-            ImageModel.instance().terminate_pool()
-            BulkModel.instance().terminate_pool()
+            BulkImageModel.instance().terminate_pool()
+            BulkCaptionModel.instance().terminate_pool()
         return f
 
     def __toggleTrain(self):

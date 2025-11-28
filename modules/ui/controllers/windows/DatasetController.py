@@ -208,7 +208,7 @@ class DatasetController(BaseController):
     def __updateDataset(self):
         @Slot()
         def f():
-            files = DatasetModel.instance().getFilteredFiles()
+            files = DatasetModel.instance().get_filtered_files()
             self.current_index = 0
             self.num_files = len(files)
             if self.num_files == 0:
@@ -323,7 +323,7 @@ class DatasetController(BaseController):
             choice, new_caption = self.__checkCaptionChanged()
 
             if choice == QtW.QMessageBox.StandardButton.Yes:
-                DatasetModel.instance().saveCaption(self.current_image_path, new_caption)
+                DatasetModel.instance().save_caption(self.current_image_path, new_caption)
         return f
 
     def __deleteCaption(self):
@@ -335,14 +335,14 @@ class DatasetController(BaseController):
                                         type="question",
                                         buttons=QtW.QMessageBox.StandardButton.Yes | QtW.QMessageBox.StandardButton.No)
                 if choice == QtW.QMessageBox.StandardButton.Yes:
-                    DatasetModel.instance().deleteCaption(self.current_image_path)
+                    DatasetModel.instance().delete_caption(self.current_image_path)
                     self.ui.captionTed.setPlainText("")
         return f
 
     def __resetCaption(self):
         @Slot()
         def f():
-            _, _, caption = DatasetModel.instance().getSample(self.current_image_path)
+            _, _, caption = DatasetModel.instance().get_sample(self.current_image_path)
             if caption is not None:
                 self.ui.captionTed.setPlainText(caption.strip())
         return f
@@ -356,7 +356,7 @@ class DatasetController(BaseController):
                                             type="warning",
                                             buttons=QtW.QMessageBox.StandardButton.Yes | QtW.QMessageBox.StandardButton.No)
                 if choice == QtW.QMessageBox.StandardButton.Yes:
-                    DatasetModel.instance().deleteSample(self.current_image_path)
+                    DatasetModel.instance().delete_sample(self.current_image_path)
                     self.__updateDataset()()
                     self.__selectFile()()
                     self.ui.fileTreeWdg.setCurrentItem(self.leafWidgets[self.current_index])
@@ -378,7 +378,7 @@ class DatasetController(BaseController):
                                 self.current_index = idx
                                 self.ui.numFilesLbl.setText(f"{self.current_index + 1}/{self.num_files}")
 
-                                self.image, mask, caption = DatasetModel.instance().getSample(self.current_image_path)
+                                self.image, mask, caption = DatasetModel.instance().get_sample(self.current_image_path)
 
                                 if caption is not None:
                                     self.ui.captionTed.setPlainText(caption)
@@ -474,7 +474,7 @@ class DatasetController(BaseController):
             choice, new_caption = self.__checkCaptionChanged(cancel=True)
             if choice != QtW.QMessageBox.StandardButton.Cancel:
                 if choice == QtW.QMessageBox.StandardButton.Yes:
-                    DatasetModel.instance().saveCaption(self.current_image_path, new_caption)
+                    DatasetModel.instance().save_caption(self.current_image_path, new_caption)
 
                 choice, new_mask, mask_path = self.__checkMaskChanged(cancel=True)
                 if choice != QtW.QMessageBox.StandardButton.Cancel:
@@ -538,7 +538,7 @@ class DatasetController(BaseController):
 
         mask = MaskHistoryModel.instance().get_state("original_mask")
         new_mask = MaskHistoryModel.instance().get_state("current_mask")
-        mask_path, mask_exists = DatasetModel.instance().getMaskPath(self.current_image_path)
+        mask_path, mask_exists = DatasetModel.instance().get_mask_path(self.current_image_path)
 
         choice = QtW.QMessageBox.StandardButton.No
         if not mask_exists:
@@ -555,7 +555,7 @@ class DatasetController(BaseController):
         if cancel:
             buttons |= QtW.QMessageBox.StandardButton.Cancel
 
-        _, _, caption = DatasetModel.instance().getSample(self.current_image_path)
+        _, _, caption = DatasetModel.instance().get_sample(self.current_image_path)
         new_caption = self.ui.captionTed.toPlainText()
 
         choice = QtW.QMessageBox.StandardButton.No

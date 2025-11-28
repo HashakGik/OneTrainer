@@ -56,7 +56,7 @@ def _resize_large_image(target_pixels, file):
     if width * height <= target_pixels:
         return False
 
-    new_width, new_height = ImageModel.calculate_dimensions_for_megapixels(
+    new_width, new_height = BulkImageModel.calculate_dimensions_for_megapixels(
         width, height, target_pixels
     )
     reduction_factor = width / new_width
@@ -141,7 +141,7 @@ def _convert_image(format_options, file):
         return False, 0
 
 
-class ImageModel(SingletonConfigModel):
+class BulkImageModel(SingletonConfigModel):
     def __init__(self):
         super().__init__({
             "directory": "",

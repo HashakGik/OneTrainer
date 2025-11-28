@@ -34,7 +34,7 @@ def _edit_text(config, read_only, file):
     return content, changed
 
 
-class BulkModel(SingletonConfigModel):
+class BulkCaptionModel(SingletonConfigModel):
     def __init__(self):
         super().__init__({
             "directory": "",

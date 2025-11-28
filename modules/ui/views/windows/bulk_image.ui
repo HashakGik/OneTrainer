@@ -20,7 +20,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>Image Tools</string>
+   <string>Bulk Image Edit Tools</string>
   </property>
   <property name="sizeGripEnabled">
    <bool>false</bool>

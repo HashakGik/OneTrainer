@@ -378,7 +378,7 @@ class ConceptModel(SingletonConfigModel):
         aspect_string = f'{aspect_fraction.denominator}:{aspect_fraction.numerator}'
         return aspect_string
 
-    def getImage(self, idx, image_id, show_augmentations=False):
+    def get_image(self, idx, image_id, show_augmentations=False):
         with self.critical_region_read():
             preview_image_path = "resources/icons/icon.png"
             file_index = -1
