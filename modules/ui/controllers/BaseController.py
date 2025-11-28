@@ -101,17 +101,26 @@ class BaseController:
             signal_list = [signal_list]
 
         for signal in signal_list:
-            c = signal.connect(slot)
+            if "DEBUG_UI" in os.environ:
+                c = signal.connect(self.__debugSlot(key, signal, slot))
+            else:
+                c = signal.connect(slot)
             if key not in self.connections:
                 self.connections[key] = []
             self.connections[key].append(c)
 
         # Schedule every update to be executed at the end of __init__
         if update_after_connect:
-            if initial_args is None:
-                self.invalidation_callbacks.append((slot, None))
+            if "DEBUG_UI" in os.environ:
+                if initial_args is None:
+                    self.invalidation_callbacks.append((self.__debugSlot(key, "Initial invalidation", slot), None))
+                else:
+                    self.invalidation_callbacks.append((self.__debugSlot(key, "Initial invalidation", slot), *initial_args))
             else:
-                self.invalidation_callbacks.append((slot, *initial_args))
+                if initial_args is None:
+                    self.invalidation_callbacks.append((slot, None))
+                else:
+                    self.invalidation_callbacks.append((slot, *initial_args))
 
     # Disconnects all the UI connections.
     def _disconnectAll(self):
@@ -180,6 +189,15 @@ class BaseController:
         # In that case it is important to register a global logger widget (e.g. on a window with different tabs for each severity level)
         # For high severity, maybe an alertbox can also be opened automatically
         StateModel.instance().log(severity, message)
+
+
+    # Slot wrapper logging the events fired.
+    def __debugSlot(self, key, signal, slot):
+        self._log("debug", f"Connected [{key}]: {signal} -> {slot}")
+        def f(*args):
+            self._log("debug", f"Fired [{key}]: {signal} -> {slot}")
+            return slot(*args)
+        return f
 
     # Open a subwindow.
     def _openWindow(self, controller, fixed_size=False):
