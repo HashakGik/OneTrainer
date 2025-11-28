@@ -67,9 +67,10 @@ class MaskDrawingToolbar(NavigationToolbar):
 
             if tool["type"] == ToolType.CHECKABLE_BUTTON:
                 wdg.setCheckable(True)
-                self.tools[tool["tool"]] = wdg
-                wdg.clicked.connect(lambda: self.toggleTool(tool["tool"]))
-            elif "fn" in tool:
+                if "tool" in tool:
+                    self.tools[tool["tool"]] = wdg
+                    wdg.clicked.connect(lambda: self.toggleTool(tool["tool"]))
+            if "fn" in tool:
                 wdg.clicked.connect(tool["fn"])
 
             if "text" in tool and "icon" in tool:

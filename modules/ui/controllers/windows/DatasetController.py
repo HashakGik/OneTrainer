@@ -15,12 +15,30 @@ import PySide6.QtWidgets as QtW
 from matplotlib.transforms import Bbox
 from PIL import Image
 from PySide6.QtCore import QCoreApplication as QCA
-from PySide6.QtCore import Slot
+from PySide6.QtCore import QEvent, QObject, Qt, Signal, Slot
 
+
+# Event filter for low-level events non-natively associated with signals.
+class DatasetEventFilter(QObject):
+    ctrlPressed = Signal()
+    ctrlReleased = Signal()
+    close = Signal()
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Type.Close:
+            self.close.emit()
+        elif event.type() == QEvent.Type.KeyPress and QtG.QKeyEvent(event).key() == Qt.Key_Control:
+            self.ctrlPressed.emit()
+        elif event.type() == QEvent.Type.KeyRelease and QtG.QKeyEvent(event).key() == Qt.Key_Control:
+            self.ctrlReleased.emit()
+
+        return QObject.eventFilter(self, obj, event)
 
 class DatasetController(BaseController):
     def __init__(self, loader, parent=None):
         super().__init__(loader, "modules/ui/views/windows/dataset.ui", name=None, parent=parent)
+        self.swapped = False
+        self.isCtrlPressed = False
 
     ###FSM###
 
@@ -73,9 +91,16 @@ class DatasetController(BaseController):
                 "type": ToolType.DOUBLE_SPINBOX,
                 "name": "alpha_sbx",
                 "text": QCA.translate("toolbar_item", "Mask opacity"),
-                "tooltip": QCA.translate("toolbar_item", "Mask opacity for preview"),
+                "tooltip": QCA.translate("toolbar_item", "Mask opacity for preview (CTRL+Mouse Wheel Up/Down)"),
                 "spinbox_range": (0.05, 1.0, 0.05),
                 "value": 0.5
+            },
+            {
+                "fn": self.__swapMouse(),
+                "type": ToolType.CHECKABLE_BUTTON,
+                "icon": f"resources/icons/buttons/{self.theme}/mouse.svg",
+                "tooltip": QCA.translate("toolbar_item", "Invert left/right mouse buttons behavior (CTRL+I)"),
+                "shortcut": "Ctrl+I"
             },
             {"type": ToolType.SEPARATOR},
             {
@@ -148,6 +173,9 @@ class DatasetController(BaseController):
 
         self.leafWidgets = {}
 
+
+        self.custom_event_filter = DatasetEventFilter(self.ui)
+
     def _connectUIBehavior(self):
         state_ui_connections = {
             "include_subdirectories": "includeSubdirCbx",
@@ -181,6 +209,12 @@ class DatasetController(BaseController):
 
         self.canvas.registerTool(EditMode.DRAW, moved_fn=self.__onDrawMoved(), use_mpl_event=False)
         self.canvas.registerTool(EditMode.FILL, clicked_fn=self.__onMaskClicked(), use_mpl_event=False)
+
+        self.ui.installEventFilter(self.custom_event_filter)
+
+        self._connect(self.custom_event_filter.ctrlPressed, self.__onCtrlPressed())
+        self._connect(self.custom_event_filter.ctrlReleased, self.__onCtrlReleased())
+        self._connect(self.custom_event_filter.close, self.__onClose())
 
 
     def _loadPresets(self):
@@ -256,95 +290,141 @@ class DatasetController(BaseController):
             self.__updateCanvas()
         return f
 
+    def __swapMouse(self):
+        @Slot(bool)
+        def f(checked):
+            self.swapped = checked
+        return f
+
+    def __onCtrlPressed(self):
+        @Slot()
+        def f():
+            self.isCtrlPressed = True
+        return f
+
+    def __onCtrlReleased(self):
+        @Slot()
+        def f():
+            self.isCtrlPressed = False
+        return f
+
+    def __onClose(self):
+        @Slot()
+        def f():
+            if self.current_image_path is not None:
+                choice, new_caption = self.__checkCaptionChanged(cancel=False)
+                if choice == QtW.QMessageBox.StandardButton.Yes:
+                    DatasetModel.instance().save_caption(self.current_image_path, new_caption)
+                else:
+                    self.__resetCaption()()
+
+                choice, new_mask, mask_path = self.__checkMaskChanged(cancel=False)
+                if choice == QtW.QMessageBox.StandardButton.Yes:
+                    Image.fromarray(new_mask, "L").convert("RGB").save(mask_path)
+                    MaskHistoryModel.instance().load_mask(new_mask)
+                else:
+                    MaskHistoryModel.instance().clear_history()
+                    self.__updateCanvas()
+        return f
+
     def __clearAll(self):
         @Slot()
         def f():
-            choice = self._openAlert(QCA.translate("dataset_window", "Clear Mask and Caption"),
-                                    QCA.translate("dataset_window",
-                                                  "Do you want to clear mask and caption? This operation will not change files on disk."),
-                                    type="question",
-                                    buttons=QtW.QMessageBox.StandardButton.Yes | QtW.QMessageBox.StandardButton.No)
-            if choice == QtW.QMessageBox.StandardButton.Yes:
-                MaskHistoryModel.instance().clear_history()
-                MaskHistoryModel.instance().delete_mask()
-                MaskHistoryModel.instance().commit()
-                self.ui.captionTed.setPlainText("")
+            if self.current_image_path is not None:
+                choice = self._openAlert(QCA.translate("dataset_window", "Clear Mask and Caption"),
+                                        QCA.translate("dataset_window",
+                                                      "Do you want to clear mask and caption? This operation will not change files on disk."),
+                                        type="question",
+                                        buttons=QtW.QMessageBox.StandardButton.Yes | QtW.QMessageBox.StandardButton.No)
+                if choice == QtW.QMessageBox.StandardButton.Yes:
+                    MaskHistoryModel.instance().clear_history()
+                    MaskHistoryModel.instance().delete_mask()
+                    MaskHistoryModel.instance().commit()
+                    self.ui.captionTed.setPlainText("")
 
-                self.__updateCanvas()
+                    self.__updateCanvas()
         return f
 
     def __resetMask(self):
         @Slot()
         def f():
-            MaskHistoryModel.instance().clear_history()
+            if self.current_image_path is not None:
+                MaskHistoryModel.instance().clear_history()
 
-            self.__updateCanvas()
+                self.__updateCanvas()
         return f
 
     def __clearMask(self):
         @Slot()
         def f():
-            MaskHistoryModel.instance().delete_mask()
-            MaskHistoryModel.instance().commit()
+            if self.current_image_path is not None:
+                MaskHistoryModel.instance().delete_mask()
+                MaskHistoryModel.instance().commit()
 
-            self.__updateCanvas()
+                self.__updateCanvas()
         return f
 
     def __undo(self):
         @Slot()
         def f():
-            MaskHistoryModel.instance().undo()
+            if self.current_image_path is not None:
+                MaskHistoryModel.instance().undo()
 
-            self.__updateCanvas()
+                self.__updateCanvas()
         return f
 
     def __redo(self):
         @Slot()
         def f():
-            MaskHistoryModel.instance().redo()
+            if self.current_image_path is not None:
+                MaskHistoryModel.instance().redo()
 
-            self.__updateCanvas()
+                self.__updateCanvas()
         return f
 
     def __saveMask(self):
         @Slot()
         def f():
-            choice, new_mask, mask_path = self.__checkMaskChanged()
-            if choice == QtW.QMessageBox.StandardButton.Yes:
-                new_mask_img = Image.fromarray(new_mask, "L")
-                new_mask_img.convert("RGB").save(mask_path)
-                MaskHistoryModel.instance().load_mask(new_mask)
+            if self.current_image_path is not None:
+                choice, new_mask, mask_path = self.__checkMaskChanged()
+                if choice == QtW.QMessageBox.StandardButton.Yes:
+                    new_mask_img = Image.fromarray(new_mask, "L")
+                    new_mask_img.convert("RGB").save(mask_path)
+                    MaskHistoryModel.instance().load_mask(new_mask)
 
         return f
 
     def __saveCaption(self):
         @Slot()
         def f():
-            choice, new_caption = self.__checkCaptionChanged()
+            if self.current_image_path is not None:
+                choice, new_caption = self.__checkCaptionChanged()
 
-            if choice == QtW.QMessageBox.StandardButton.Yes:
-                DatasetModel.instance().save_caption(self.current_image_path, new_caption)
+                if choice == QtW.QMessageBox.StandardButton.Yes:
+                    DatasetModel.instance().save_caption(self.current_image_path, new_caption)
         return f
 
     def __deleteCaption(self):
         @Slot()
         def f():
-            if self.ui.captionTed.toPlainText().strip() != "":
-                choice = self._openAlert(QCA.translate("dataset_window", "Delete Caption"),
-                                        QCA.translate("dataset_window", "Do you want to delete caption?"),
-                                        type="question",
-                                        buttons=QtW.QMessageBox.StandardButton.Yes | QtW.QMessageBox.StandardButton.No)
-                if choice == QtW.QMessageBox.StandardButton.Yes:
-                    DatasetModel.instance().delete_caption(self.current_image_path)
-                    self.ui.captionTed.setPlainText("")
+            if self.current_image_path is not None:
+                if self.ui.captionTed.toPlainText().strip() != "":
+                    choice = self._openAlert(QCA.translate("dataset_window", "Delete Caption"),
+                                            QCA.translate("dataset_window", "Do you want to delete caption?"),
+                                            type="question",
+                                            buttons=QtW.QMessageBox.StandardButton.Yes | QtW.QMessageBox.StandardButton.No)
+                    if choice == QtW.QMessageBox.StandardButton.Yes:
+                        DatasetModel.instance().delete_caption(self.current_image_path)
+                        self.ui.captionTed.setPlainText("")
         return f
 
     def __resetCaption(self):
         @Slot()
         def f():
-            _, _, caption = DatasetModel.instance().get_sample(self.current_image_path)
-            if caption is not None:
-                self.ui.captionTed.setPlainText(caption.strip())
+            if self.current_image_path is not None:
+                _, _, caption = DatasetModel.instance().get_sample(self.current_image_path)
+                if caption is not None:
+                    self.ui.captionTed.setPlainText(caption.strip())
         return f
 
     def __deleteSample(self):
@@ -410,53 +490,63 @@ class DatasetController(BaseController):
     def __onClicked(self):
         @Slot(MouseButton, int, int)
         def f(btn, x, y):
-            if btn == MouseButton.MIDDLE:
+            if self.current_image_path is not None and btn == MouseButton.MIDDLE:
                 MaskHistoryModel.instance().delete_mask() # This click is also associated with a release, which will commit the change and update the canvas.
         return f
 
     def __onReleased(self):
         @Slot(MouseButton, int, int)
         def f(btn, x, y):
-            MaskHistoryModel.instance().commit()
+            if self.current_image_path is not None:
+                MaskHistoryModel.instance().commit()
 
-            self.__updateCanvas()
+                self.__updateCanvas()
         return f
 
     def __onWheelUp(self):
         @Slot()
         def f():
-            wdg = self.canvas.toolbar.findChild(QtW.QSpinBox, "brush_sbx")
-            new_val = wdg.value() + wdg.singleStep()
-            wdg.setValue(new_val) # This will emit valueChanged, which is connected to self.__setBrushSize()
+            if self.current_image_path is not None:
+                if self.isCtrlPressed:
+                    wdg = self.canvas.toolbar.findChild(QtW.QDoubleSpinBox, "alpha_sbx")
+                else:
+                    wdg = self.canvas.toolbar.findChild(QtW.QSpinBox, "brush_sbx")
+                new_val = wdg.value() + wdg.singleStep()
+                wdg.setValue(new_val) # This will emit valueChanged, which is connected to self.__setBrushSize()
         return f
 
     def __onWheelDown(self):
         @Slot()
         def f():
-            wdg = self.canvas.toolbar.findChild(QtW.QSpinBox, "brush_sbx")
-            new_val = wdg.value() - wdg.singleStep()
-            wdg.setValue(new_val)
+            if self.current_image_path is not None:
+                if self.isCtrlPressed:
+                    wdg = self.canvas.toolbar.findChild(QtW.QDoubleSpinBox, "alpha_sbx")
+                else:
+                    wdg = self.canvas.toolbar.findChild(QtW.QSpinBox, "brush_sbx")
+                new_val = wdg.value() - wdg.singleStep()
+                wdg.setValue(new_val)
         return f
 
     def __onMaskClicked(self):
         @Slot(MouseButton, int, int)
         def f(btn, x, y):
-            if btn == MouseButton.LEFT:
-                MaskHistoryModel.instance().fill(x, y, 0)
-            elif btn == MouseButton.RIGHT:
-                MaskHistoryModel.instance().fill(x, y, 255)
-            self.__updateCanvas()
+            if self.current_image_path is not None:
+                if btn == MouseButton.LEFT:
+                    MaskHistoryModel.instance().fill(x, y, 0 if not self.swapped else 255)
+                elif btn == MouseButton.RIGHT:
+                    MaskHistoryModel.instance().fill(x, y, 255 if not self.swapped else 0)
+                self.__updateCanvas()
         return f
 
     def __onDrawMoved(self):
         @Slot(MouseButton, int, int, int, int)
         def f(btn, x0, y0, x1, y1):
-            if x0 >= 0 and y0 >= 0 and x1 >= 0 and y1 >= 0:
+            if self.current_image_path is not None and x0 >= 0 and y0 >= 0 and x1 >= 0 and y1 >= 0:
                 if btn == MouseButton.LEFT:
-                    MaskHistoryModel.instance().paint_stroke(x0, y0, x1, y1, int(self.brush), 0, commit=False)  # Draw stroke 0 from x0,y0 to x1,y1
+                    MaskHistoryModel.instance().paint_stroke(x0, y0, x1, y1, int(self.brush), 0 if not self.swapped else 255, commit=False)  # Draw stroke 0 from x0,y0 to x1,y1
                     self.__updateCanvas(blitbb=(x0 - self.brush, x1 + self.brush, y0 - self.brush, y1 + self.brush))
                 elif btn == MouseButton.RIGHT:
-                    MaskHistoryModel.instance().paint_stroke(x0, y0, x1, y1, int(self.brush), 255, commit=False)
+                    MaskHistoryModel.instance().paint_stroke(x0, y0, x1, y1, int(self.brush), 255 if not self.swapped else 0, commit=False)
                     self.__updateCanvas(blitbb=(x0 - self.brush, x1 + self.brush, y0 - self.brush, y1 + self.brush))
 
         return f
