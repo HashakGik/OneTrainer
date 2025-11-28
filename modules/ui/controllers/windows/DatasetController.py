@@ -186,7 +186,7 @@ class DatasetController(BaseController):
         self.canvas.registerTool(EditMode.DRAW, moved_fn=self.__onDrawMoved(), use_mpl_event=False)
         self.canvas.registerTool(EditMode.FILL, clicked_fn=self.__onMaskClicked(), use_mpl_event=False)
 
-        self.timer.setInterval(50)
+        self.timer.setInterval(100)
         self.timer.start()
 
 
@@ -326,7 +326,7 @@ class DatasetController(BaseController):
         def f():
             choice, new_mask, mask_path = self.__checkMaskChanged()
             if choice == QtW.QMessageBox.StandardButton.Yes:
-                new_mask_img = Image.fromarray(new_mask * 255, "L")
+                new_mask_img = Image.fromarray(new_mask, "L")
                 new_mask_img.convert("RGB").save(mask_path)
                 MaskHistoryModel.instance().load_mask(new_mask)
 
@@ -459,7 +459,7 @@ class DatasetController(BaseController):
             if btn == MouseButton.LEFT:
                 MaskHistoryModel.instance().fill(x, y, 0)
             elif btn == MouseButton.RIGHT:
-                MaskHistoryModel.instance().fill(x, y, 1)
+                MaskHistoryModel.instance().fill(x, y, 255)
             self.__updateCanvas()
         return f
 
@@ -471,7 +471,7 @@ class DatasetController(BaseController):
                     MaskHistoryModel.instance().paint_stroke(x0, y0, x1, y1, int(self.brush), 0, commit=False)  # Draw stroke 0 from x0,y0 to x1,y1
                     self.dirty = True
                 elif btn == MouseButton.RIGHT:
-                    MaskHistoryModel.instance().paint_stroke(x0, y0, x1, y1, int(self.brush), 1, commit=False)
+                    MaskHistoryModel.instance().paint_stroke(x0, y0, x1, y1, int(self.brush), 255, commit=False)
                     self.dirty = True
 
         return f
@@ -494,7 +494,7 @@ class DatasetController(BaseController):
                 choice, new_mask, mask_path = self.__checkMaskChanged(cancel=True)
                 if choice != QtW.QMessageBox.StandardButton.Cancel:
                     if choice == QtW.QMessageBox.StandardButton.Yes:
-                        Image.fromarray(new_mask * 255, "L").convert("RGB").save(mask_path)
+                        Image.fromarray(new_mask, "L").convert("RGB").save(mask_path)
 
             return choice != QtW.QMessageBox.StandardButton.Cancel
         else:

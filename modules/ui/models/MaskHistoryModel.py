@@ -38,7 +38,7 @@ class MaskHistoryModel(SingletonConfigModel):
             self.config.buffer = []
             self.config.ptr = 0
             self.config.original_mask = mask
-            self.config.current_mask = mask.copy() # TODO: BUG: it is as if this is not copied, and saves do not take into account the initial loaded mask...
+            self.config.current_mask = mask.copy()
             self.config.width, self.config.height = mask.shape
             packed, _, _ = self.__pack(self.config.current_mask)
             self.config.buffer.append(packed)
