@@ -11,7 +11,7 @@ class ConceptController(BaseController):
     def __init__(self, loader, concept_window, idx, parent=None):
         self.concept_window = concept_window
         self.idx = idx
-        super().__init__(loader, "modules/ui/views/widgets/concept.ui", name=None, parent=parent)
+        super().__init__(loader, "modules/ui/views/widgets/concept.ui", invalidate_once=False, name=None, parent=parent)
 
     ###FSM###
 

@@ -39,6 +39,8 @@ class OnetrainerController(BaseController):
     def __init__(self, loader):
         super().__init__(loader, "modules/ui/views/windows/onetrainer.ui", name="OneTrainer", parent=None)
 
+        QtW.QApplication.instance().initialized.emit()
+
     ###FSM###
 
     def _setup(self):

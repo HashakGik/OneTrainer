@@ -399,5 +399,6 @@ class TrainingController(BaseController):
         @Slot()
         def f():
             self.ui.layerFilterRegexCbx.setEnabled(self.ui.layerFilterCmb.currentText() == "custom")
-            self.ui.layerFilterLed.setText(",".join(self.ui.layerFilterCmb.currentData()))
+            if self.ui.layerFilterCmb.currentData() is not None:
+                self.ui.layerFilterLed.setText(",".join(self.ui.layerFilterCmb.currentData()))
         return f

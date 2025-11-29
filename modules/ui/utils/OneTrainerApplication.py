@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QApplication
 
 class OnetrainerApplication(QApplication):
     # Signal for global UI invalidation (e.g., when a config file is reloaded from disk).
+    initialized = Signal()
     stateChanged = Signal()
     savedConfig = Signal(str)
 

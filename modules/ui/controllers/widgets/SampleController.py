@@ -11,7 +11,7 @@ class SampleController(BaseController):
         self.idx = idx
         self.sample_window = sample_window
 
-        super().__init__(loader, "modules/ui/views/widgets/sample.ui", name=None, parent=parent)
+        super().__init__(loader, "modules/ui/views/widgets/sample.ui", invalidate_once=False, name=None, parent=parent)
 
     ###FSM###
 

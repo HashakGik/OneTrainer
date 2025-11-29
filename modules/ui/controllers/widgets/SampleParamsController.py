@@ -16,7 +16,7 @@ class SampleParamsController(BaseController):
         self.write_signal = write_signal
         self.idx = None
 
-        super().__init__(loader, "modules/ui/views/widgets/sampling_params.ui", name=None, parent=parent)
+        super().__init__(loader, "modules/ui/views/widgets/sampling_params.ui", invalidate_once=False, name=None, parent=parent)
 
     ###FSM###
 

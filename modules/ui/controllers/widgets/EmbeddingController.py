@@ -9,7 +9,7 @@ from PySide6.QtCore import QCoreApplication as QCA
 class EmbeddingController(BaseController):
     def __init__(self, loader, idx, parent=None):
         self.idx = idx
-        super().__init__(loader, "modules/ui/views/widgets/embedding.ui", name=None, parent=parent)
+        super().__init__(loader, "modules/ui/views/widgets/embedding.ui", invalidate_once=False, name=None, parent=parent)
 
     ###FSM###
 

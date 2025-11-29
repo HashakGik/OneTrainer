@@ -25,6 +25,9 @@ class StateModel(SingletonConfigModel):
         super().__init__(TrainConfig.default_values())
         self.is_profiling = False
         self.tensorboard_subprocess = None
+        self.old_workspace = None
+        self.old_tensorboard_port = None
+        self.old_expose_tensorboard = None
 
     def save_default(self):
         with self.critical_region_read():
@@ -108,32 +111,40 @@ class StateModel(SingletonConfigModel):
             scalene_profiler.start()
 
     def start_tensorboard(self):
-        if self.tensorboard_subprocess:
-            self.stop_tensorboard()
-
         ws, port, expose = self.bulk_read("workspace_dir", "tensorboard_port", "tensorboard_expose")
 
-        tensorboard_executable = os.path.join(os.path.dirname(sys.executable), "tensorboard")
-        tensorboard_log_dir = os.path.join(ws, "tensorboard")
+        if self.old_tensorboard_port != port and self.old_workspace != ws and self.old_expose_tensorboard != expose:
+            if self.tensorboard_subprocess:
+                self.stop_tensorboard()
 
-        os.makedirs(Path(tensorboard_log_dir).absolute(), exist_ok=True)
+            with self.critical_region_write():
+                self.old_tensorboard_port = port
+                self.old_workspace = ws
+                self.old_expose_tensorboard = expose
 
-        tensorboard_args = [
-            tensorboard_executable,
-            "--logdir",
-            tensorboard_log_dir,
-            "--port",
-            str(port),
-            "--samples_per_plugin=images=100,scalars=10000",
-        ]
 
-        if expose:
-            tensorboard_args.append("--bind_all")
 
-        try:
-            self.tensorboard_subprocess = subprocess.Popen(tensorboard_args)
-        except Exception:
-            self.tensorboard_subprocess = None
+            tensorboard_executable = os.path.join(os.path.dirname(sys.executable), "tensorboard")
+            tensorboard_log_dir = os.path.join(ws, "tensorboard")
+
+            os.makedirs(Path(tensorboard_log_dir).absolute(), exist_ok=True)
+
+            tensorboard_args = [
+                tensorboard_executable,
+                "--logdir",
+                tensorboard_log_dir,
+                "--port",
+                str(port),
+                "--samples_per_plugin=images=100,scalars=10000",
+            ]
+
+            if expose:
+                tensorboard_args.append("--bind_all")
+
+            try:
+                self.tensorboard_subprocess = subprocess.Popen(tensorboard_args)
+            except Exception:
+                self.tensorboard_subprocess = None
 
     def stop_tensorboard(self):
         if self.tensorboard_subprocess:

@@ -19,7 +19,7 @@ from showinfm import show_in_file_manager
 class BaseController:
     state_ui_connections = {} # Class attribute, but it will be overwritten by every subclass.
 
-    def __init__(self, loader, ui_file, name=None, parent=None, **kwargs):
+    def __init__(self, loader, ui_file, name=None, parent=None, invalidate_once=True, **kwargs):
         self.loader = loader
         self.parent = parent
         self.ui = loader.load(ui_file, parentWidget=parent.ui if parent is not None else None)
@@ -33,7 +33,10 @@ class BaseController:
         self._connectStateUI(self.state_ui_connections, StateModel.instance(), signal=QtW.QApplication.instance().stateChanged, update_after_connect=True, **kwargs)
         self._connectUIBehavior()
         self._connectInputValidation()
-        self._invalidateUI()
+        if invalidate_once:
+            self._connect(QtW.QApplication.instance().initialized, lambda: self._invalidateUI())
+        else:
+            self._invalidateUI()
 
     ###FSM###
 
@@ -73,8 +76,7 @@ class BaseController:
                     callback = functools.partial(BaseController._writeControl, ui_elem, var, model)
                     if signal is not None:
                         self._connect(signal, callback)
-                    if update_after_connect:
-                        callback()
+                    self.invalidation_callbacks.append((callback, None))
 
     # Override this method to connect signals and slots intended for visual behavior (e.g., enable/disable controls).
     def _connectUIBehavior(self):
@@ -101,26 +103,17 @@ class BaseController:
             signal_list = [signal_list]
 
         for signal in signal_list:
-            if "DEBUG_UI" in os.environ:
-                c = signal.connect(self.__debugSlot(key, signal, slot))
-            else:
-                c = signal.connect(slot)
+            c = signal.connect(slot)
             if key not in self.connections:
                 self.connections[key] = []
             self.connections[key].append(c)
 
         # Schedule every update to be executed at the end of __init__
         if update_after_connect:
-            if "DEBUG_UI" in os.environ:
-                if initial_args is None:
-                    self.invalidation_callbacks.append((self.__debugSlot(key, "Initial invalidation", slot), None))
-                else:
-                    self.invalidation_callbacks.append((self.__debugSlot(key, "Initial invalidation", slot), *initial_args))
+            if initial_args is None:
+                self.invalidation_callbacks.append((slot, None))
             else:
-                if initial_args is None:
-                    self.invalidation_callbacks.append((slot, None))
-                else:
-                    self.invalidation_callbacks.append((slot, *initial_args))
+                self.invalidation_callbacks.append((slot, *initial_args))
 
     # Disconnects all the UI connections.
     def _disconnectAll(self):
@@ -190,14 +183,6 @@ class BaseController:
         # For high severity, maybe an alertbox can also be opened automatically
         StateModel.instance().log(severity, message)
 
-
-    # Slot wrapper logging the events fired.
-    def __debugSlot(self, key, signal, slot):
-        self._log("debug", f"Connected [{key}]: {signal} -> {slot}")
-        def f(*args):
-            self._log("debug", f"Fired [{key}]: {signal} -> {slot}")
-            return slot(*args)
-        return f
 
     # Open a subwindow.
     def _openWindow(self, controller, fixed_size=False):
