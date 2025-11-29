@@ -13,7 +13,7 @@ class NewSampleController(BaseController):
     ###FSM###
 
     def _setup(self):
-        self.samplingParams = SampleParamsController(self.loader, model_instance=SampleModel.instance(), use_idx=True, update_signal=QtW.QApplication.instance().openSample, parent=self.parent)
+        self.samplingParams = SampleParamsController(self.loader, model_instance=SampleModel.instance(), write_signal=self.ui.okBtn.clicked, read_signal=QtW.QApplication.instance().openSample, parent=self.parent)
         self.ui.paramsLay.addWidget(self.samplingParams.ui)
 
     def _connectUIBehavior(self):

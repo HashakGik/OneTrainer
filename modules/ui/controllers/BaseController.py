@@ -135,7 +135,7 @@ class BaseController:
         if key in self.connections:
             for c in self.connections[key]:
                 self.ui.disconnect(c)
-            self.connections[key] = []
+            del self.connections[key]
 
     def _updateProgress(self, elem):
         @Slot(dict)
@@ -278,7 +278,7 @@ class BaseController:
                     ui_elem.setCurrentIndex(idx)
             elif isinstance(ui_elem, (QtW.QSpinBox, QtW.QDoubleSpinBox)):
                 ui_elem.setValue(float(val))
-            elif isinstance(ui_elem, (SNLineEdit, QtW.QLineEdit)): # IMPORTANT: keep this above base class!
+            elif isinstance(ui_elem, (SNLineEdit, QtW.QLineEdit)):
                 ui_elem.setText(str(val))
         ui_elem.blockSignals(False)
 

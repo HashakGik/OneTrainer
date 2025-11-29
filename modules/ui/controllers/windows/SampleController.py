@@ -15,7 +15,7 @@ class SampleController(BaseController):
     ###FSM###
 
     def _setup(self):
-        self.samplingParams = SampleParamsController(self.loader, model_instance=SamplingModel.instance(), parent=self.parent)
+        self.samplingParams = SampleParamsController(self.loader, model_instance=SamplingModel.instance(), write_signal=self.ui.sampleBtn.clicked, parent=self.parent)
         self.ui.paramsLay.addWidget(self.samplingParams.ui)
 
     def _connectUIBehavior(self):
