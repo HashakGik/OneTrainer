@@ -29,34 +29,94 @@
    <bool>true</bool>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="8" column="0" rowspan="5" colspan="7">
-    <widget class="QTreeWidget" name="fileTreeWdg">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="editTriggers">
-      <set>QAbstractItemView::EditTrigger::CurrentChanged</set>
-     </property>
-     <attribute name="headerVisible">
-      <bool>false</bool>
-     </attribute>
-     <column>
-      <property name="text">
-       <string notr="true">1</string>
-      </property>
-     </column>
-    </widget>
-   </item>
-   <item row="6" column="6">
-    <widget class="QComboBox" name="fileFilterCmb"/>
-   </item>
-   <item row="6" column="3" colspan="3">
+   <item row="6" column="1">
     <widget class="QLineEdit" name="fileFilterLed"/>
    </item>
-   <item row="12" column="7" colspan="6">
+   <item row="7" column="0">
+    <widget class="QLabel" name="label_5">
+     <property name="text">
+      <string>Caption Filter</string>
+     </property>
+    </widget>
+   </item>
+   <item row="14" column="8">
+    <spacer name="horizontalSpacer_3">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>40</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="4" column="1">
+    <widget class="QCheckBox" name="includeSubdirCbx">
+     <property name="toolTip">
+      <string>Include subdirectories when loading images</string>
+     </property>
+     <property name="text">
+      <string>Include Subdirectories</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="2">
+    <widget class="QPushButton" name="browseBtn">
+     <property name="text">
+      <string>Browse</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="2">
+    <widget class="QComboBox" name="fileFilterCmb"/>
+   </item>
+   <item row="4" column="0">
+    <widget class="QPushButton" name="openBtn">
+     <property name="text">
+      <string>Open</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="1">
+    <widget class="QLineEdit" name="captionFilterLed"/>
+   </item>
+   <item row="6" column="0">
+    <widget class="QLabel" name="label_4">
+     <property name="text">
+      <string>File/Path Filter</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="7" rowspan="10" colspan="5">
+    <layout class="QVBoxLayout" name="canvasLay">
+     <item>
+      <spacer name="horizontalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item row="7" column="2">
+    <widget class="QComboBox" name="captionFilterCmb"/>
+   </item>
+   <item row="8" column="0" colspan="3">
+    <widget class="QCheckBox" name="maskFilterCbx">
+     <property name="text">
+      <string>With Mask Only</string>
+     </property>
+    </widget>
+   </item>
+   <item row="15" column="7" colspan="5">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <widget class="QPlainTextEdit" name="captionTed">
@@ -98,17 +158,28 @@
      </item>
     </layout>
    </item>
-   <item row="0" column="6">
-    <widget class="QPushButton" name="browseBtn">
-     <property name="text">
-      <string>Browse</string>
+   <item row="10" column="0" rowspan="6" colspan="3">
+    <widget class="QTreeWidget" name="fileTreeWdg">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
      </property>
+     <property name="editTriggers">
+      <set>QAbstractItemView::EditTrigger::CurrentChanged</set>
+     </property>
+     <attribute name="headerVisible">
+      <bool>false</bool>
+     </attribute>
+     <column>
+      <property name="text">
+       <string notr="true">1</string>
+      </property>
+     </column>
     </widget>
    </item>
-   <item row="7" column="6">
-    <widget class="QComboBox" name="captionFilterCmb"/>
-   </item>
-   <item row="5" column="0" colspan="6">
+   <item row="5" column="0" colspan="3">
     <widget class="QLabel" name="numFilesLbl">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -121,69 +192,12 @@
      </property>
     </widget>
    </item>
-   <item row="5" column="7" rowspan="7" colspan="6">
-    <layout class="QVBoxLayout" name="canvasLay">
-     <item>
-      <spacer name="horizontalSpacer_2">
-       <property name="orientation">
-        <enum>Qt::Orientation::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-    </layout>
-   </item>
-   <item row="7" column="3" colspan="3">
-    <widget class="QLineEdit" name="captionFilterLed"/>
-   </item>
-   <item row="7" column="0">
-    <widget class="QLabel" name="label_5">
+   <item row="9" column="0" colspan="3">
+    <widget class="QCheckBox" name="captionFilterCbx">
      <property name="text">
-      <string>Caption Filter</string>
+      <string>With Caption Only</string>
      </property>
     </widget>
-   </item>
-   <item row="6" column="0">
-    <widget class="QLabel" name="label_4">
-     <property name="text">
-      <string>File/Path Filter</string>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="4">
-    <widget class="QCheckBox" name="includeSubdirCbx">
-     <property name="toolTip">
-      <string>Include subdirectories when loading images</string>
-     </property>
-     <property name="text">
-      <string>Include Subdirectories</string>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="0">
-    <widget class="QPushButton" name="openBtn">
-     <property name="text">
-      <string>Open</string>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="10">
-    <spacer name="horizontalSpacer">
-     <property name="orientation">
-      <enum>Qt::Orientation::Horizontal</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>40</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
    </item>
   </layout>
  </widget>
@@ -195,6 +209,8 @@
   <tabstop>fileFilterCmb</tabstop>
   <tabstop>captionFilterLed</tabstop>
   <tabstop>captionFilterCmb</tabstop>
+  <tabstop>maskFilterCbx</tabstop>
+  <tabstop>captionFilterCbx</tabstop>
   <tabstop>fileTreeWdg</tabstop>
   <tabstop>captionTed</tabstop>
   <tabstop>saveCaptionBtn</tabstop>

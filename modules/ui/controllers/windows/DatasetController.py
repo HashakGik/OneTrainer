@@ -39,6 +39,7 @@ class DatasetController(BaseController):
         super().__init__(loader, "modules/ui/views/windows/dataset.ui", name=None, parent=parent)
         self.swapped = False
         self.isCtrlPressed = False
+        self.path = None
 
     ###FSM###
 
@@ -163,6 +164,7 @@ class DatasetController(BaseController):
         self.im = None
         self.image = None
         self.current_image_path = None
+        self.current_caption = ""
 
         self.canvas = FigureWidget(parent=self.ui, width=7, height=5, zoom_tools=True, other_tools=self.tools, emit_clicked=True, emit_moved=True, emit_wheel=True, emit_released=True, use_data_coordinates=True)
         self.ax = self.canvas.figure.subplots() # TODO: when panning, the drawing area changes size. Probably there is some matplotlib option to set.
@@ -177,16 +179,6 @@ class DatasetController(BaseController):
         self.custom_event_filter = DatasetEventFilter(self.ui)
 
     def _connectUIBehavior(self):
-        state_ui_connections = {
-            "include_subdirectories": "includeSubdirCbx",
-            "file_filter": "fileFilterLed",
-            "file_filter_mode": "fileFilterCmb",
-            "caption_filter": "captionFilterLed",
-            "caption_filter_mode": "captionFilterCmb",
-        }
-
-        self._connectStateUI(state_ui_connections, DatasetModel.instance(), signal=None, update_after_connect=True)
-
         self._connect(self.ui.openBtn.clicked, self.__openDataset())
         self._connect(self.ui.browseBtn.clicked, self.__browse())
 
@@ -196,10 +188,14 @@ class DatasetController(BaseController):
 
         self._connect(self.ui.fileTreeWdg.itemSelectionChanged, self.__selectFile())
 
-        self._connect(self.ui.fileFilterLed.editingFinished, self.__updateDataset())
-        self._connect(self.ui.fileFilterCmb.activated, self.__updateDataset())
-        self._connect(self.ui.captionFilterLed.editingFinished, self.__updateDataset())
-        self._connect(self.ui.captionFilterCmb.activated, self.__updateDataset())
+        self._connect([self.ui.fileFilterLed.editingFinished, self.ui.fileFilterCmb.activated,
+                       self.ui.captionFilterLed.editingFinished, self.ui.captionFilterCmb.activated,
+                       self.ui.maskFilterCbx.toggled, self.ui.captionFilterCbx.toggled],
+                      self.__updateDataset())
+
+        self._connect(self.ui.includeSubdirCbx.toggled, self.__startScan())
+
+        self._connect(self.ui.captionTed.textChanged, self.__updateCaption())
 
 
         self._connect(self.canvas.clicked, self.__onClicked())
@@ -226,23 +222,50 @@ class DatasetController(BaseController):
 
     ###Reactions###
 
+    def __updateCaption(self):
+        @Slot()
+        def f():
+            self.current_caption = self.ui.captionTed.toPlainText()
+        return f
+
     def __openDataset(self):
         @Slot()
         def f():
-            diag = QtW.QFileDialog()
-            dir = diag.getExistingDirectory(parent=None, caption=QCA.translate("dialog_window", "Open Dataset directory"), dir=DatasetModel.instance().get_state("path"))
+            if self.__saveChanged():
+                diag = QtW.QFileDialog()
+                self.path = diag.getExistingDirectory(parent=None, caption=QCA.translate("dialog_window", "Open Dataset directory"), dir=DatasetModel.instance().get_state("path"))
+                self.__startScan()()
 
-            worker, name = WorkerPool.instance().createNamed(self.__scan(), name="open_dataset", dir=dir)
-            if worker is not None:
-                worker.connectCallbacks(finished_fn=self.__updateDataset())
-                WorkerPool.instance().start(name)
+        return f
 
+    def __startScan(self):
+        @Slot()
+        def f():
+            if self.path is not None:
+                DatasetModel.instance().set_state("include_subdirectories", self.ui.includeSubdirCbx.isChecked())
+
+                worker, name = WorkerPool.instance().createNamed(self.__scan(), name="open_dataset", dir=self.path)
+                if worker is not None:
+                    worker.connectCallbacks(finished_fn=self.__updateDataset())
+                    WorkerPool.instance().start(name)
         return f
 
     def __updateDataset(self):
         @Slot()
         def f():
+            data = {
+                "file_filter": self.ui.fileFilterLed.text(),
+                "file_filter_mode": self.ui.fileFilterCmb.currentData(),
+                "caption_filter": self.ui.captionFilterLed.text(),
+                "caption_filter_mode": self.ui.captionFilterCmb.currentData(),
+                "filter_mask_exists": self.ui.maskFilterCbx.isChecked(),
+                "filter_caption_exists": self.ui.captionFilterCbx.isChecked(),
+            }
+            DatasetModel.instance().bulk_write(data)
+
             files = DatasetModel.instance().get_filtered_files()
+
+
             self.current_index = 0
             self.num_files = len(files)
             if self.num_files == 0:
@@ -586,16 +609,17 @@ class DatasetController(BaseController):
             self.canvas.draw_idle()
 
 
-    def __buildTree(self, fullname, tree, idx, name=None):
+    #def __buildTree(self, fullname, tree, idx, name=None):
+    def __buildTree(self, file, tree, idx, name=None):
         if name is None:
-            name = fullname
+            name = file[0]
         path = name.split("/")
         if len(path) == 1:
-            tree[path[0]] = (idx, fullname)
+            tree[path[0]] = (idx, file)
         elif len(path) > 1:
             if path[0] not in tree:
                 tree[path[0]] = {}
-            self.__buildTree(fullname, tree[path[0]], idx, "/".join(path[1:]))
+            self.__buildTree(file, tree[path[0]], idx, "/".join(path[1:]))
 
     def __drawTree(self, parent, tree):
         for k in sorted(tree.keys(), key=lambda x: DatasetModel.natural_sort_key(x)):
@@ -607,17 +631,23 @@ class DatasetController(BaseController):
                 wdg.idx = None
                 self.__drawTree(wdg, v)
             else:
-                # TODO: We may decide to add icons to files, to show at a glance which images are associated with captions and/or masks. It requires to change DatasetModel.config.files to a triple (image file, mask file, caption file), possibly causing heavy changes to multiple methods.
-                # wdg.setIcon(0, QtG.QIcon("resources/icons/buttons/{}/???.svg".format(self.theme)))
-                # setTooltip to tell whether captions and masks exist
-                #
-                # A proposal of icons:
-                # file-x-corner -> img only ("No caption or mask found")
-                # file-scan -> img + mask ("Missing caption")
-                # file-minus-corner -> img + caption ("Missing mask")
-                # file-check-corner -> img + mask + caption ("Caption and mask available")
+                has_caption = v[1][1]
+                has_mask = v[1][2]
 
-                wdg.fullpath = v[1]
+                if has_caption and has_mask:
+                    wdg.setIcon(0, QtG.QIcon(f"resources/icons/buttons/{self.theme}/file-check-corner.svg"))
+                    wdg.setToolTip(0, QCA.translate("dataset_window", "Caption and mask available"))
+                elif has_caption:
+                    wdg.setIcon(0, QtG.QIcon(f"resources/icons/buttons/{self.theme}/file-minus-corner.svg"))
+                    wdg.setToolTip(0, QCA.translate("dataset_window", "Missing mask"))
+                elif has_mask:
+                    wdg.setIcon(0, QtG.QIcon(f"resources/icons/buttons/{self.theme}/file-scan.svg"))
+                    wdg.setToolTip(0, QCA.translate("dataset_window", "Missing caption"))
+                else:
+                    wdg.setIcon(0, QtG.QIcon(f"resources/icons/buttons/{self.theme}/file-x-corner.svg"))
+                    wdg.setToolTip(0, QCA.translate("dataset_window", "No caption or mask found"))
+
+                wdg.fullpath = v[1][0]
                 wdg.idx = v[0]
                 self.leafWidgets[v[0]] = wdg
 
@@ -646,16 +676,15 @@ class DatasetController(BaseController):
             buttons |= QtW.QMessageBox.StandardButton.Cancel
 
         _, _, caption = DatasetModel.instance().get_sample(self.current_image_path)
-        new_caption = self.ui.captionTed.toPlainText()
 
         choice = QtW.QMessageBox.StandardButton.No
 
         if caption is None:
             choice = QtW.QMessageBox.StandardButton.Yes
-        elif caption.strip() != new_caption.strip():
+        elif caption.strip() != self.current_caption.strip():
             choice = self._openAlert(QCA.translate("dataset_window", "Save Caption"),
                                     QCA.translate("dataset_window", "Caption has changed. Do you want to save it?"),
                                     type="question",
                                     buttons=buttons)
 
-        return choice, new_caption
+        return choice, self.current_caption

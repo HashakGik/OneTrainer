@@ -76,11 +76,12 @@ class MaskHistoryModel(SingletonConfigModel):
 
     def clear_history(self):
         with self.critical_region_write():
-            self.config.buffer = []
-            self.config.ptr = 0
-            self.config.current_mask = self.config.original_mask.copy()
-            packed, _, _ = self.__pack(self.config.current_mask)
-            self.config.buffer.append(packed)
+            if self.config.original_mask is not None:
+                self.config.buffer = []
+                self.config.ptr = 0
+                self.config.current_mask = self.config.original_mask.copy()
+                packed, _, _ = self.__pack(self.config.current_mask)
+                self.config.buffer.append(packed)
 
     def delete_mask(self):
         with self.critical_region_write():

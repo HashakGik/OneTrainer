@@ -33,6 +33,8 @@ class DatasetConfig(BaseConfig):
         data.append(("caption_filter", "", str, False))
         data.append(("caption_filter_mode", CaptionFilter.MATCHES, CaptionFilter, False))
         data.append(("files", [], list, False))
+        data.append(("filter_mask_exists", False, bool, False))
+        data.append(("filter_caption_exists", False, bool, False))
 
         return DatasetConfig(data)
 
@@ -68,16 +70,23 @@ class DatasetModel(SingletonConfigModel):
             self.set_state("files", sorted(results, key=lambda x: self.natural_sort_key(x)))
 
     def get_filtered_files(self):
-        (path, unfiltered_files, file_filter, file_filter_mode,
-         caption_filter, caption_filter_mode) = self.bulk_read("path", "files", "file_filter",
-                                                               "file_filter_mode", "caption_filter", "caption_filter_mode")
+        (path, filtered, file_filter, file_filter_mode,
+         caption_filter, caption_filter_mode, filter_mask_exists, filter_caption_exists) = self.bulk_read("path", "files", "file_filter",
+                                                               "file_filter_mode", "caption_filter", "caption_filter_mode",
+                                                                                      "filter_mask_exists", "filter_caption_exists")
         file_filter = file_filter.strip()
         caption_filter = caption_filter.strip()
 
-        if file_filter == "" and caption_filter == "":
-            return unfiltered_files
+        filtered = [self.get_caption_mask_exist(path, file) for file in filtered]
 
-        filtered = [str(f) for f in unfiltered_files]
+        if filter_caption_exists:
+            filtered = [f for f in filtered if f[1]]
+
+        if filter_mask_exists:
+            filtered = [f for f in filtered if f[2]]
+
+        if file_filter == "" and caption_filter == "":
+            return filtered
 
         if file_filter != "":
             try:
@@ -85,17 +94,17 @@ class DatasetModel(SingletonConfigModel):
 
                 if file_filter_mode == FileFilter.FILE:
                     filtered = [
-                        f for f in filtered if pattern.search(Path(f).name)
+                        f for f in filtered if pattern.search(Path(f[0]).name)
                     ]
                 elif file_filter_mode == FileFilter.PATH:
                     filtered = [
-                        f for f in filtered if pattern.search(f)  # f is already str # TODO: This is taken from the original implementation, however it has the same effect of FileFilter.BOTH, because it does not strip the filename before searching
+                        f for f in filtered if pattern.search(f[0])  # f is already str # TODO: This is taken from the original implementation, however it has the same effect of FileFilter.BOTH, because it does not strip the filename before searching
                     ]
                 else:  # Both
                     filtered = [
                         f
                         for f in filtered
-                        if pattern.search(f) or pattern.search(Path(f).name)
+                        if pattern.search(f[0]) or pattern.search(Path(f[0]).name)
                     ]
             except re.error:
                 pass
@@ -103,7 +112,8 @@ class DatasetModel(SingletonConfigModel):
         if caption_filter != "" and path is not None:
             try:
                 caption_files = []
-                for file_path_str in filtered:  # Iterate over strings
+                for file in filtered:  # Iterate over strings
+                    file_path_str = file[0]
                     full_path = Path(path) / file_path_str  # file_path_str is relative
                     caption_path = full_path.with_suffix(".txt")
 
@@ -128,11 +138,10 @@ class DatasetModel(SingletonConfigModel):
                             if pat.search(caption_content):
                                 match = True
                         if match:
-                            caption_files.append(
-                                Path(file_path_str))  # Store as Path object if preferred, or keep as str
+                            caption_files.append(file)
                     except Exception:
                         continue
-                filtered = [str(p) for p in caption_files]  # Convert back to list of strings if needed
+                filtered = list(caption_files)
             except Exception as e:
                 self.log("error", f"Error applying caption filter: {e}")
 
@@ -203,6 +212,14 @@ class DatasetModel(SingletonConfigModel):
         with self.critical_region_write():
             if path in self.config.files:
                 self.config.files.remove(path)
+
+    @staticmethod
+    def get_caption_mask_exist(path, file):
+        full_path = Path(path) / file
+        caption_path = full_path.with_suffix(".txt")
+        mask_path = full_path.with_name(f"{full_path.stem}-masklabel.png")
+
+        return str(file), caption_path.exists(), mask_path.exists()
 
 
     def __is_supported(self, filename):
