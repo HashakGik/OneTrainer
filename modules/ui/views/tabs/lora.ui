@@ -254,7 +254,7 @@
        </widget>
       </item>
       <item row="1" column="1">
-       <widget class="SNLineEdit" name="coftLed" native="true">
+       <widget class="QLineEdit" name="coftLed">
         <property name="toolTip">
          <string>The control strength of COFT. Only has an effect if COFT is enabled</string>
         </property>
@@ -311,13 +311,6 @@
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>SNLineEdit</class>
-   <extends>QWidget</extends>
-   <header>snlineedit.h</header>
-  </customwidget>
- </customwidgets>
  <tabstops>
   <tabstop>typeCmb</tabstop>
   <tabstop>baseModelLed</tabstop>

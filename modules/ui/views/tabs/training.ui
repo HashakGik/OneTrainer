@@ -406,7 +406,7 @@
               </widget>
              </item>
              <item row="5" column="4">
-              <widget class="SNLineEdit" name="te1LearningRateLed" native="true">
+              <widget class="QLineEdit" name="te1LearningRateLed">
                <property name="toolTip">
                 <string>The learning rate of the text encoder 1. Overrides the base learning rate</string>
                </property>
@@ -452,7 +452,7 @@
               </widget>
              </item>
              <item row="7" column="3">
-              <widget class="SNLineEdit" name="te2LearningRateLed" native="true">
+              <widget class="QLineEdit" name="te2LearningRateLed">
                <property name="toolTip">
                 <string>The learning rate of the text encoder 2. Overrides the base learning rate</string>
                </property>
@@ -661,7 +661,7 @@
               </widget>
              </item>
              <item row="5" column="2">
-              <widget class="SNLineEdit" name="te3LearningRateLed" native="true">
+              <widget class="QLineEdit" name="te3LearningRateLed">
                <property name="toolTip">
                 <string>The learning rate of the text encoder 3. Overrides the base learning rate</string>
                </property>
@@ -780,7 +780,7 @@
               </widget>
              </item>
              <item row="7" column="3">
-              <widget class="SNLineEdit" name="te4LearningRateLed" native="true">
+              <widget class="QLineEdit" name="te4LearningRateLed">
                <property name="toolTip">
                 <string>The learning rate of the text encoder 4. Overrides the base learning rate</string>
                </property>
@@ -868,7 +868,7 @@
               </widget>
              </item>
              <item row="2" column="2">
-              <widget class="SNLineEdit" name="unetLearningRateLed" native="true">
+              <widget class="QLineEdit" name="unetLearningRateLed">
                <property name="toolTip">
                 <string>The learning rate of the UNet. Overrides the base learning rate</string>
                </property>
@@ -954,7 +954,7 @@
               </widget>
              </item>
              <item row="2" column="2">
-              <widget class="SNLineEdit" name="transformerLearningRateLed" native="true">
+              <widget class="QLineEdit" name="transformerLearningRateLed">
                <property name="toolTip">
                 <string>The learning rate of the Transformer. Overrides the base learning rate</string>
                </property>
@@ -1013,7 +1013,7 @@
               </widget>
              </item>
              <item row="2" column="2">
-              <widget class="SNLineEdit" name="priorLearningRateLed" native="true">
+              <widget class="QLineEdit" name="priorLearningRateLed">
                <property name="toolTip">
                 <string>The learning rate of the Prior. Overrides the base learning rate</string>
                </property>
@@ -1029,7 +1029,7 @@
             </property>
             <layout class="QGridLayout" name="gridLayout_3">
              <item row="0" column="1">
-              <widget class="SNLineEdit" name="embeddingLearningRateLed" native="true">
+              <widget class="QLineEdit" name="embeddingLearningRateLed">
                <property name="toolTip">
                 <string>The learning rate of embeddings. Overrides the base learning rate</string>
                </property>
@@ -1529,7 +1529,7 @@ A blank 'custom' field or 'Full' will train all layers</string>
               </widget>
              </item>
              <item row="5" column="1" colspan="2">
-              <widget class="SNLineEdit" name="learningRateLed" native="true">
+              <widget class="QLineEdit" name="learningRateLed">
                <property name="toolTip">
                 <string>The base learning rate</string>
                </property>
@@ -1811,13 +1811,6 @@ A blank 'custom' field or 'Full' will train all layers</string>
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>SNLineEdit</class>
-   <extends>QWidget</extends>
-   <header>snlineedit.h</header>
-  </customwidget>
- </customwidgets>
  <tabstops>
   <tabstop>scrollArea</tabstop>
   <tabstop>optimizerCmb</tabstop>

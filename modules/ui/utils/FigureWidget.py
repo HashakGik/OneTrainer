@@ -46,7 +46,7 @@ class FigureWidget(FigureCanvas):
     moved = Signal(MouseButton, int, int, int, int) # x0, y0, x1, y1.
     # Note: signals cannot be declared with unions like "int | None". So we either declare them as object to allow emitting None values, or use -1 for events outside the image (the latter approach is safer).
 
-    def __init__(self, parent=None, width=5, height=4, dpi=100, zoom_tools=False, other_tools=None, emit_clicked=False, emit_released=False, emit_wheel=False, emit_moved=False, use_data_coordinates=True): # TODO: maybe add preferred size? Or use width/height in pixel and change figsize as the closest integer ratio (*10 // 10)?
+    def __init__(self, parent=None, width=5, height=4, dpi=100, zoom_tools=False, other_tools=None, emit_clicked=False, emit_released=False, emit_wheel=False, emit_moved=False, use_data_coordinates=True):
         super().__init__(Figure(figsize=(width, height), layout="tight", dpi=dpi))
         self.toolbar = MaskDrawingToolbar(self, parent=parent)
         self.event_handlers = {}

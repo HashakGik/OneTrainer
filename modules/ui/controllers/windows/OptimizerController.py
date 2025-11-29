@@ -1,6 +1,5 @@
 from modules.ui.controllers.BaseController import BaseController
 from modules.ui.models.StateModel import StateModel
-from modules.ui.utils.SNLineEdit import SNLineEdit
 
 import PySide6.QtWidgets as QtW
 from PySide6.QtCore import QCoreApplication as QCA
@@ -132,7 +131,8 @@ class OptimizerController(BaseController):
                     wdg.setMaximum(999999)
                 else:
                     wdg_name = "{}{}".format(k, "Led")
-                    wdg = SNLineEdit(parent=self.ui, objectName=wdg_name)
+                    wdg = QtW.QLineEdit(parent=self.ui, objectName=wdg_name)
+                    self._connectScientificNotation(wdg, inf=True, neg_inf=True)
                 wdg.setToolTip(v["tooltip"])
                 lbl.setBuddy(wdg)
                 self.ui.optimizerLay.addWidget(lbl, row, 0, 1, 1)
@@ -204,7 +204,7 @@ class OptimizerController(BaseController):
                         if val is not None:
                             wdg.setValue(int(val))
                 else:
-                    wdg = self.ui.findChild(SNLineEdit, f"{k}Led")
+                    wdg = self.ui.findChild(QtW.QLineEdit, f"{k}Led")
                     if wdg is not None:
                         wdg.setVisible(k in self.OPTIMIZER_DEFAULT_PARAMETERS[optimizer])
                         if val is not None:

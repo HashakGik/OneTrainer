@@ -82,7 +82,6 @@ Auxiliary, but QT-dependent, classes.
 
 - `FigureWidget`: Figure widget for plots and images. Can be instantiated with a toolbar (separate `MaskDrawingToolbar` class) for inspection or image editing (arbitrary tools are managed by the controller instantiating the widget).
 - `OneTrainerApplication`: Subclass of QApplication defining global signals which can be connected from any Controller
-- `SNLineEdit`: Scientific notation Line Edit Widget, Currently does not allow the assignment of min-max values
 - `WorkerPool`: Generic threaded processor executing functions on a thread pool automatically managed. Functions can be made reentrant (i.e., they will be executed once, even when multiple calls are made, useful for example when a user attempts to scan the same folder before the previous operation terminated) if they are associated with a name.
 
 ## QT6 Notions

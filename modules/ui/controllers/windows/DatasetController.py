@@ -167,7 +167,7 @@ class DatasetController(BaseController):
         self.current_caption = ""
 
         self.canvas = FigureWidget(parent=self.ui, width=7, height=5, zoom_tools=True, other_tools=self.tools, emit_clicked=True, emit_moved=True, emit_wheel=True, emit_released=True, use_data_coordinates=True)
-        self.ax = self.canvas.figure.subplots() # TODO: when panning, the drawing area changes size. Probably there is some matplotlib option to set.
+        self.ax = self.canvas.figure.subplots()
         self.ax.set_axis_off()
 
         self.ui.canvasLay.addWidget(self.canvas.toolbar)

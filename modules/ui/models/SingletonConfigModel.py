@@ -176,11 +176,20 @@ class SingletonConfigModel:
                     elif hasattr(ref, ptr):
                         ref = getattr(ref, ptr)
                 if isinstance(ref, list):
-                    ref[int(path.split(".")[-1])] = value
+                    if isinstance(ref[int(path.split(".")[-1])], float):
+                        ref[int(path.split(".")[-1])] = float(value)
+                    else:
+                        ref[int(path.split(".")[-1])] = value
                 elif isinstance(ref, dict):
-                    ref[path.split(".")[-1]] = value
+                    if path.split(".")[-1] and isinstance(ref[path.split(".")[-1]], float):
+                        ref[path.split(".")[-1]] = float(value)
+                    else:
+                        ref[path.split(".")[-1]] = value
                 elif hasattr(ref, path.split(".")[-1]):
-                    setattr(ref, path.split(".")[-1], value)
+                    if isinstance(getattr(ref, path.split(".")[-1]), float):
+                        setattr(ref, path.split(".")[-1], float(value))
+                    else:
+                        setattr(ref, path.split(".")[-1], value)
                 else:
                     self.log("debug", f"Key {path} not found in config")
 

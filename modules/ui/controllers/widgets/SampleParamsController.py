@@ -1,5 +1,4 @@
 from modules.ui.controllers.BaseController import BaseController
-from modules.ui.utils.SNLineEdit import SNLineEdit
 from modules.util.enum.NoiseScheduler import NoiseScheduler
 
 import PySide6.QtGui as QtGui
@@ -84,7 +83,7 @@ class SampleParamsController(BaseController):
                             wdg.setCurrentIndex(i)
                     elif isinstance(wdg, (QtW.QSpinBox, QtW.QDoubleSpinBox)):
                         wdg.setValue(float(data[k]))
-                    elif isinstance(wdg, (SNLineEdit, QtW.QLineEdit)):
+                    elif isinstance(wdg, QtW.QLineEdit):
                         wdg.setText(str(data[k]))
 
         return f
@@ -104,7 +103,7 @@ class SampleParamsController(BaseController):
                     data[k] = wdg.currentData()
                 elif isinstance(wdg, (QtW.QSpinBox, QtW.QDoubleSpinBox)):
                     data[k] = wdg.value()
-                elif isinstance(wdg, (SNLineEdit, QtW.QLineEdit)):
+                elif isinstance(wdg, QtW.QLineEdit):
                     data[k] = wdg.text()
 
 

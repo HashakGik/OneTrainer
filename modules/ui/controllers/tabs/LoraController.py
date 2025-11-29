@@ -44,6 +44,8 @@ class LoraController(BaseController):
         # Alpha cannot be higher than rank.
         self._connect(self.ui.rankSbx.valueChanged, lambda x: (self.ui.alphaSbx.setMaximum(x)))
 
+        self._connectScientificNotation(self.ui.coftLed)
+
 
     def _loadPresets(self):
         for e in PeftType.enabled_values():

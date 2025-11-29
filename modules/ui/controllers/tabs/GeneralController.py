@@ -70,11 +70,6 @@ class GeneralController(BaseController):
     def _connectInputValidation(self):
         self.ui.deviceIndexesLed.setValidator(QtGui.QRegularExpressionValidator(r"(\d+(,\d+)*)?", self.ui))
 
-        # TODO: trainDeviceLed and tempDeviceLed may be restricted to a comma-separated list of available torch devices.
-        # However it is not possible to get a list of all possible devices without some hackish error handling, according to https://github.com/pytorch/pytorch/issues/97026
-        # torch.testing.get_all_device_types() returns the *current* machine's devices, which may be unsuitable for cloud training.
-
-
     ###Reactions###
 
     def __updateValidate(self):

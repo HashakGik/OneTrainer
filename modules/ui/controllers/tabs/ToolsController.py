@@ -45,6 +45,6 @@ class ToolsController(BaseController):
 
     def __open(self, window):
         if self.children[window].ui.isHidden():
-            self._openWindow(self.children[window], fixed_size=window != "dataset") # TODO: Maybe we want to allow any window to resize?
+            self._openWindow(self.children[window], fixed_size=window != "dataset")
         else:
             self.children[window].ui.activateWindow()

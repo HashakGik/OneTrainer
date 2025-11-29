@@ -4,9 +4,9 @@ import re
 import webbrowser
 
 from modules.ui.models.StateModel import StateModel
-from modules.ui.utils.SNLineEdit import SNLineEdit
 
 import PySide6.QtCore as QtC
+import PySide6.QtGui as QtG
 import PySide6.QtWidgets as QtW
 from PySide6.QtCore import Qt, Slot
 from showinfm import show_in_file_manager
@@ -68,8 +68,6 @@ class BaseController:
                         self._connect(ui_elem.activated, self.__readCbm(ui_elem, var, model), group)
                     elif isinstance(ui_elem, (QtW.QSpinBox, QtW.QDoubleSpinBox)):
                         self._connect(ui_elem.valueChanged, self.__readSbx(ui_elem, var, model), group)
-                    elif isinstance(ui_elem, SNLineEdit): # IMPORTANT: keep this above base class!
-                        self._connect(ui_elem.editingFinished, self.__readSNLed(ui_elem, var, model), group)
                     elif isinstance(ui_elem, QtW.QLineEdit):
                         self._connect(ui_elem.editingFinished, self.__readLed(ui_elem, var, model), group)
 
@@ -143,6 +141,39 @@ class BaseController:
         return f
 
     ###Utils###
+
+    # Force a QLineEdit to accept only scientific notation values, bounded by the provided parameters.
+    # For improved user experience, if the values are non-negative, the regex immediately rejects a minus sign, for every other range, checks are performed after editing is finished.
+    def _connectScientificNotation(self, edit_box, min=None, max=None, inf=False, neg_inf=False, include_min=True, include_max=True):
+        regex = r"\d+\.?\d*([eE][+-]?\d+)?" # Positive numbers.
+
+        if min is None or neg_inf or min < 0.0: # Allow negative numbers.
+            regex = r"[+-]?" + regex
+        if inf: # Allow positive infinity.
+            regex = r"inf|" + regex
+        if neg_inf: # Allow negative infinity.
+            regex = r"-inf|" + regex
+
+        edit_box.setValidator(QtG.QRegularExpressionValidator(regex, self.ui))
+
+        if min is not None and not neg_inf or max is not None and not inf:
+            # Value capping after editing is finished (i.e., the user presses Enter, Tab or the QLineEdit looses focus).
+            self._connect(edit_box.editingFinished, self.__capValues(edit_box, min, max, include_min, include_max))
+
+    @staticmethod
+    def __capValues(elem, min=None, max=None, include_min=True, include_max=True):
+        @Slot()
+        def f():
+            val = float(elem.text())
+            if min is not None and include_min and val < min:
+                elem.setText(str(min))
+                if min is not None and not include_min and val <= min:
+                    elem.setText(str(min + 0.01)) # Adding arbitrary delta.
+                if max is not None and not include_max and val >= max:
+                    elem.setText(str(max - 0.01)) # Subtracting arbitrary delta.
+            if max is not None and include_max and val > max:
+                elem.setText(str(max))
+        return f
 
     # Opens a file dialog window when tool_button is pressed, then populates edit_box with the returned value.
     # Filters for file extensions follow QT6 syntax.
@@ -243,10 +274,6 @@ class BaseController:
         return lambda x: model.set_state(var, x)
 
     @staticmethod
-    def __readSNLed(ui_elem, var, model):
-        return lambda: model.set_state(var, float(ui_elem.text()))
-
-    @staticmethod
     def __readLed(ui_elem, var, model):
         return lambda: model.set_state(var, ui_elem.text())
 
@@ -263,7 +290,7 @@ class BaseController:
                     ui_elem.setCurrentIndex(idx)
             elif isinstance(ui_elem, (QtW.QSpinBox, QtW.QDoubleSpinBox)):
                 ui_elem.setValue(float(val))
-            elif isinstance(ui_elem, (SNLineEdit, QtW.QLineEdit)):
+            elif isinstance(ui_elem, QtW.QLineEdit):
                 ui_elem.setText(str(val))
         ui_elem.blockSignals(False)
 

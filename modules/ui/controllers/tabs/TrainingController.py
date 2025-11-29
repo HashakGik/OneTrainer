@@ -197,6 +197,16 @@ class TrainingController(BaseController):
         self._connect(self.ui.minNoisingStrengthSbx.valueChanged, self.__validateNoisingStrength("min"))
         self._connect(self.ui.maxNoisingStrengthSbx.valueChanged, self.__validateNoisingStrength("max"))
 
+        self._connectScientificNotation(self.ui.learningRateLed, min=0.0)
+        self._connectScientificNotation(self.ui.te1LearningRateLed, min=0.0)
+        self._connectScientificNotation(self.ui.te2LearningRateLed, min=0.0)
+        self._connectScientificNotation(self.ui.te3LearningRateLed, min=0.0)
+        self._connectScientificNotation(self.ui.te4LearningRateLed, min=0.0)
+        self._connectScientificNotation(self.ui.unetLearningRateLed, min=0.0)
+        self._connectScientificNotation(self.ui.transformerLearningRateLed, min=0.0)
+        self._connectScientificNotation(self.ui.priorLearningRateLed, min=0.0)
+        self._connectScientificNotation(self.ui.embeddingLearningRateLed, min=0.0)
+
     def _loadPresets(self):
         for ui_name in ["unetStopCmb", "te1StopTrainingCmb", "te2StopTrainingCmb", "te3StopTrainingCmb", "te4StopTrainingCmb",
                         "priorStopCmb", "transformerStopCmb"]:

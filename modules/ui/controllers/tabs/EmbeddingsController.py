@@ -22,7 +22,7 @@ class EmbeddingsController(BaseController):
     def _connectUIBehavior(self):
         self._connectFileDialog(self.ui.baseEmbeddingBtn, self.ui.baseEmbeddingLed, is_dir=False, save=False,
                                title=QCA.translate("dialog_window", "Open base embeddings"),
-                               filters=QCA.translate("filetype_filters", "Safetensors (*.safetensors);;Diffusers (model_index.json);;Checkpoints (*.ckpt, *.pt, *.bin);;All Files (*.*)")) # TODO: Maybe refactor filters in ENUM?
+                               filters=QCA.translate("filetype_filters", "Safetensors (*.safetensors);;Diffusers (model_index.json);;Checkpoints (*.ckpt *.pt *.bin);;All Files (*.*)"))
 
     def _loadPresets(self):
         for e in DataType.enabled_values(context="embeddings"):

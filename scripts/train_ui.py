@@ -8,7 +8,6 @@ import sys
 
 from modules.ui.controllers.OneTrainerController import OnetrainerController
 from modules.ui.utils.OneTrainerApplication import OnetrainerApplication
-from modules.ui.utils.SNLineEdit import SNLineEdit
 
 from PySide6.QtUiTools import QUiLoader
 
@@ -19,7 +18,6 @@ def main():
 
     app = OnetrainerApplication(sys.argv)
     loader = QUiLoader()
-    loader.registerCustomWidget(SNLineEdit)
 
     onetrainer = OnetrainerController(loader)
 
